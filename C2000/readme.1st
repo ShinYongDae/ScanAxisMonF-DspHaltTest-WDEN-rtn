@@ -1,0 +1,3802 @@
+*******************************************************************************
+             TMS320C2000 Code Generation Tools Version 4.1.3
+*******************************************************************************
+ 
+TEXAS INSTRUMENTS MICROPROCESSOR DEVELOPMENT TOOLS
+ 
+Thank you for choosing Texas Instruments software development tools.  It is our
+goal to provide you with the most useful and efficient development tools from
+which to develop your applications around Texas Instruments processors.
+Included in the package you will find our Microprocessor Development Systems
+Customer Support Guide which shows services available to our customers.
+ 
+This readme.txt file documents changes and additions to the tools which
+are not covered in the printed documentation.
+ 
+For questions or technical support, please consult your customer support guide
+or contact the TI Product Information Center at:
+Email: support@ti.com
+Phone: (972) 644-5580
+Fax:   (972) 927-6377
+
+*******************************************************************************
+                             Table of Contents
+*******************************************************************************
+1. Fixed Issues in 4.1.3
+
+2. Fixed Issues in 4.1.2
+
+3. Fixed Issues in 4.1.1
+
+4. Fixed Issues in 4.1.0
+
+5. New Features in 4.1.x
+   5.1.  Default DWARF2 debug format
+   5.2.  64-bit (long long) Integer Support
+   5.3.  Compiler Optimizations
+   5.4.  Compiler Instrinsics for norm operation
+   5.5.  Change in Banners, New Compiler Option -version
+   5.6.  New Object File Utilities (nm2000, strip2000, ofd2000)
+   5.7.  User controlled assembler fill values (--asm_code_fill,--asm_data_fill)
+   5.8.  Calling the Assembler and Linker Directly is Deprecated
+   5.9.  Added __ioport keyword
+   5.10. Summary of Removed/Deprecated Options
+   5.11. The -d Compiler Option Can Be Used to Define a Quoted String
+   5.12. Compiling with -pm and File-Specific Options in Code Composer Studio
+   5.13. Sharing C Header Files With Assembly Source
+   5.14. Support for C++ Exceptions
+   5.15. Expanded Assembler Option -D (and -ad)
+   5.16. Pragmas to Control Diagnostic Messages
+   5.17. BOOT ROM support for I2C port in Hex Converter
+
+6. New Linker Features in 4.1.x
+   6.1.  New --default_order linker switch
+   6.2.  Updated Linker Allocation Errors
+   6.3.  Allocation Using Multiple Memory Areas
+   6.4.  Automatic Splitting of Code/Data
+   6.5.  Defining Load-Time Addresses, Dimensions at Link-Time
+   6.6.  Specifying Library Members as Input Sections
+   6.7.  New linker command file operator, palign
+   6.8.  Generate XML link information file
+   6.9.  Linker-generated Copy Tables
+
+7. Compatibility issues in 4.1.x
+   7.1.  Pre-defined VERSION macro changes
+
+8. Known Issues in 4.1.x
+
+  K001. SDSsq11516 - Long types for bitfields are not supported although they'
+  K002. SDSsq11669 - C++ allows enumerators larger than 'int' but C2000 Compiler
+  K003. SDSsq11721 - "Extern inline" functions are not supported in C2000 C/C++ 
+  K004. SDSsq19038 - Global variables are not visible in watch window if using
+  K005. SDSsq32879 - STABS variables declared in loop bodies are promoted to f
+  K006. SDSsq33090 - DWARF does not correctly represent variables stored in re
+  K007. SDSsq33594 - Fail accessing files specified as PC UNC paths (\\server\
+  K008. SDSsq34243 - pow(2,x) has fairly significant rounding error           
+  K009. SDSsq35081 - When using long filenames, ar2000 may not correctly add fil
+  K010. SDSsq39228 - assembler expression ~(0x80000000) evaluates as 0x8000000
+  K011. SDSsq39254 - Linker -xml_link_info option doesn't work when in a comma
+  K012. SDSsq39619 - Float literal conversion to integers incorrectly saturate
+  K013. SDSsq40598 - Compiler cannot handle odd file names at link stage
+  K014. SDSsq40842 - Ill-defined constant symbol causes pass conflict error
+  K015. SDSsq41616 - DWARF problem: static variables not placed in the right l
+  K016. SDSsq43189 - Static data members missing DW_AT_specification attribute
+  K017. SDSsq43823 - Linker hangs when trying to create a relocatable output m
+  K040. SDSsq44745 - Malloc(-4) instruction should return NULL ptr instead of
+
+A. Annex
+  A001. Sharing C Header files with Assembly Source
+  A002. Linker-generated Copy Tables
+
+*******************************************************************************
+1. Fixed Issues in 4.1.3
+*******************************************************************************
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq44977 
+------------------------------------------------------------------------------
+Summary  : Array or struct variables in separate blocks don't share stack space
+
+Functions which define aggregate objects (structs or arrays) in separate
+non-overlapping scopes will incur stack overhead for each object,
+instead of sharing the stack space among the scopes.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq45025 
+------------------------------------------------------------------------------
+Summary  : Compiler did not generate expected code for address constant 
+           initializer
+
+Consider,
+
+   int thePara;
+   long testVar = (((long)&thePara) + 0x81000000);
+
+with optimization, the upper 16-bits of testvar is zero.
+
+The statement 
+long testVar = (((long)&thePara) + 0x81000000);
+
+does not follow strict C standard and the compiler accepts it as a C99 
+extension. The compiler behavior has been to treat this as an address 
+constant and 0x81000000 is treated as an offset. Only int typed offset 
+is allowed so far. Even in 3.x compiler this was treated as int but 
+the optimizer did not optimize the expression. The 4.1.x optimizer 
+optimizes the expression by truncating 0x81000000 to 16-bits (to zero).
+
+Note that the compiler generates the following warning for the above code:
+warning: pointer points outside of underlying object
+
+Compiler was updated to support offset bigger than int.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq45033
+------------------------------------------------------------------------------
+Summary  : Label on its own line gets incorrect value when there is an 
+           alignment hole after it
+
+For example, consider the following code:
+
+        .sect ".text"
+        nop
+L1:
+        .long 0x12345678
+
+The asm generates the following:
+
+       1 00000000               .sect ".text"
+       2 00000000 7700          nop
+       3 00000001       L1:
+       4 00000002 5678          .long 0x12345678
+         00000003 1234 
+
+Note that L1 gets the value 1 whereas the long value is stored at SPC 
+2. If user tries to load the long value using the label L1 they would 
+get wrong values.
+
+The assembler is updated to fix this.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq45123
+------------------------------------------------------------------------------
+Summary  : Section header gets incorrect flag when code section is not named 
+           .text
+
+In COFF STYP_TEXT section flag is used to mark the text section. The assembler
+uses the section name to set this flag. If user defines a code section and
+does not name it .text then the assembler does not set this flag.
+
+For example, the STYP_TEXT flag was not set for the following section even
+though the section contains instruction encoding.
+
+    .sect "other"
+    nop
+
+Updated the assembler to fix this issue.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq45175 
+------------------------------------------------------------------------------
+Summary  : Needed 'compare ACC to 0' instruction after MIN/MAX is optimized out
+
+Under optimization, the following test fails.
+
+void foo(long a, long b)
+{
+   a = (a > b) ? a : b;
+   if (a)
+      printf("failed\n");
+   else
+      printf("passed\n");
+}
+
+void main()
+{
+   foo(0, -10);
+}
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq45201 
+------------------------------------------------------------------------------
+Summary  : boot.asm generates asm errors when CONST_COPY is set to 1
+
+boo28.inc is updated to fix this issue.
+
+*******************************************************************************
+2. Fixed Issues in 4.1.2
+*******************************************************************************
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq43654
+------------------------------------------------------------------------------
+Summary  : Invalid SP index addressing generated by compiler
+
+Compiler generates Illegal offset value for SP index addressing when 
+the following conditions are met:
+
+1) Actual frame size is little less than 64 words
+2) Registers and register pairs with different alignment requirements are 
+   spilled in random order creating alignment holes in frame
+3) Alignment hole increases the frame size to be greater than 64 words
+
+"bug.asm", ERROR!   at line 172: [E0004] Illegal offset value, 
+expecting (0-63)
+                MOV       AL,*-SP[65]           ; |410| 
+
+"bug.asm", ERROR!   at line 172: [E0003] Illegal indirect memaddr 
+specification
+                MOV       AL,*-SP[65]           ; |410| 
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq43831
+------------------------------------------------------------------------------
+Summary  : false warning of incompatible type when using -pm option
+
+In the C parser we eliminate any type information that is not really
+referenced in the file. The problem here stems from the fact that when
+program mode compile is requested we may have inconsistent type
+information in different files. 
+
+Example:
+file 1 only references a pointer to a "type" so we do not need the
+information associated with the type members.
+file 2 references the whole type so we need the type information
+associated with the type members.
+When program mode compile is requested in such a case the type
+information between the 2 files is inconsistent because of the absence
+of member data in file 1. The toolchain then has a problem resolving the
+type information between the multiple instances and then issues a warning.
+
+The fix involves forcing the keeping of all associated type information
+when program mode compile has been requested. All active branches are
+affected.
+
+==========================================
+false warning when using -pm option
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq44022
+------------------------------------------------------------------------------
+Summary  : floating point constant folding in optimizer generates wrong results
+
+The following test fails when -o2 optimization is used:
+
+extern const long double e = 2.7182818284590452353602874713526625L;
+
+if (e == (float)e) printf("ERROR\n");
+else               printf("ok\n");
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq44101
+------------------------------------------------------------------------------
+Summary  : Assembler accepts illegal instructions without generating error
+
+The assembler does not generate error for the following illegal 
+instructions:
+ MOV  XAR6, ACC<<2
+ MOV  XAR7, ACC<<3  
+ MOVH @x,   P<<2 
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq44170
+------------------------------------------------------------------------------
+Summary  : Bad hoisting leads to use of undefined variable
+
+Using a "const" variable that is declared within a loop body and also 
+updated on each iteration may cause that variable to be used before 
+it's defined as the expression is moved in front of the loop
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq44177
+------------------------------------------------------------------------------
+Summary  : Single precision floating point add error when one operand is 
+           less than FLT_EPSILON.
+
+The single precision floating point add routine produced incorrect
+result for the following test when compiled with no optimization.
+
+   d1 = 1.0;
+   d2 = 2 * FLT_EPSILON / 3;
+   d3 = d1 + d2;
+   if (d3 <= d1)
+       printf("Failed");
+
+This bug is fixed in the RTS floating point add routine.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq44229
+------------------------------------------------------------------------------
+Summary  : The -o0 optimization generates wrong code for the _IQmpy()
+           function 
+
+The -o0 optimization generates wrong code for the following intrinsic
+call _IQmpy():
+
+  temp = __IQmpy(temp, 98304L, 15);
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq44420
+------------------------------------------------------------------------------
+Summary  : Assignment of long double variables is not as expected
+
+Consider the following code:
+
+   long double df = 0.14124379766714229000;
+
+Compiler assigned the following value for df:
+
+df : 0.14124379766714230122 (0x3fc21446d9df21be)
+
+The floating constant without the suffix L should be parsed as type 
+double as per C standard. In C28x, double is single precision and hence 
+this constant should be parsed as single precision and then assigned 
+to the double precision result. Hence the result should be 
+
+df : 0.14124380052089691162 (0x3fc21446e0000000)
+
+NOTE: This fix could cause change in behavior in the customer 
+application. For example, consider the following:
+
+#define   _IQ30(A)      (long) ((A) * 1073741824.0L)
+
+iqval = _IQ30(0.6);
+
+Without the above fix, iqval would be 644245094. This fix will give 
+iqval a value of 644245120.
+
+The code should be rewritten to 'iqval = _IQ30(0.6L)' to get the 
+previous value of 644245094.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq44498
+------------------------------------------------------------------------------
+Summary  : Optimizer generates incorrect code with -o1 
+
+Compiler generates code ignoring the narrowing conversion when the 
+following conditions are met:
+
+reg_op2 = (unsigned long) (unsigned short) reg_op1 + reg_op2;
+or 
+reg_op = (unsigned long (unsigned short) reg_op + mem_op
+
+where reg_op, reg_op1 and reg_op2 are allocated to registers and 
+mem_op is in memory.
+
+Since variables are usually allocated to registers when optimization 
+is enabled, this bug generally manifests when optimization is used. 
+
+This bug can manifest without optimization when register keyword is 
+used for variables.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq44581
+------------------------------------------------------------------------------
+Summary  : The .cinit section addresses created by hex2000 are left shifted 8
+           bits
+
+When using the -cr link option, the hex converter may incorrectly 
+generate addresses for the .cinit section, left shifting addresses 8 
+bits.
+ 
+------------------------------------------------------------------------------
+Fixed Bug SDSsq44626
+------------------------------------------------------------------------------
+Summary  : Local variable n getting corrupted in the instruction *cp++ =
+           "01"[n%b];
+
+Compiler generated incorrect code when the result of unsigned long
+divide or mod operation is cast to signed long. The bug corrupted the
+stack under this condition. For example the following C code caused
+the bug to manifest.
+
+unsigned long a=0x1000;
+unsigned long b=0x20000;
+long c=0;
+
+c = b/0x1234;
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq44641
+------------------------------------------------------------------------------
+Summary  : Optimization is eliminating if statement and assuming null
+
+If function A() calls function B() more than once, and function A() is
+called from outside the file, and one of its calls to B() supplies a
+constant argument while another is a pass-through of its own parameter,
+then optimization at -o3 may erroneously conclude that the parameter of
+B() is always constant and specialize it away.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq44763
+------------------------------------------------------------------------------
+Summary  : Compiler does not store intermediate result
+
+A compiler peephole bug incorrectly optimized out an instruction. This 
+bug manifests when the following asm sequence is generated
+
+MOVL XARn, ACC 
+MOVL ACC, XARm
+ADDL ACC, XARn           
+MOVL XARm, ACC 
+
+and when XARn is needed later.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq44772
+------------------------------------------------------------------------------
+Summary  : Bugs in RTS function fgets()
+
+There are 2 loops in the test case. These loops use the fgets function
+to read from a file and write to the STDIO.
+
+The issue with the fgets in the first loop is: The fgets doesn't
+terminate the string with a '\0' because of which the final line of the
+file is longer that expected.
+
+The issue with the fgets in the second loop is: the expression "fgets (
+buffer, 100, fp ) != NULL" is evaluate to true while reading the
+last-but-oneth-line. Because of this the last line doesn't get read 
+from
+the file.
+
+Both issues disappear by inserting a "strcpy(buffer, "");" line after 
+consuming the read line (using the fgets).
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq44787
+------------------------------------------------------------------------------
+Summary  : function inlining cause wrong constant propagation
+
+The optimizer's parameter-specialization pass may incorrectly conclude
+that a function's parameter is always passed the same value, under
+particular circumstances including one call that passes a global variable
+and another that passes a dereference of a pointer-to-void.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq44880
+------------------------------------------------------------------------------
+Summary  : Some const variables are placed in .ebss instead of in .econst
+
+Consider the following C++ code:
+
+const unsigned long Var3 = ((unsigned long)&Var0 + (unsigned 
+long) 0x80000000L);
+
+Due to a parser bug, Var3 is allocated to .bss instead of .const.
+
+------------------------------------------------------------------------------
+Addressed Performance SDSsq44889
+------------------------------------------------------------------------------
+Summary  : Compiler does not generate MAX instruction in certain cases.
+Exists in: 
+Fixed in : 4.1.2
+
+MAX instructions are not generated for the following code:
+
+int max(int a)
+{
+   return (a > 0) ? a : 0; 
+}
+
+long lmax(long a)
+{
+   return (a > 0) ? a : 0; 
+}
+
+NOTE: The optimizer does not generate min/max for the following code.
+This is a known issue and will be addressed later. 
+
+int max(int a)
+{
+   return (a > 1) ? a : 1; 
+}
+
+int min(int a)
+{
+   return (a < 1) ? a : 1; 
+}
+
+long lmax(long a)
+{
+   return (a > 1) ? a : 1; 
+}
+
+long lmin(long a)
+{
+   return (a < 1) ? a : 1; 
+}
+
+*******************************************************************************
+3. Fixed Issues in 4.1.1
+*******************************************************************************
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq41851
+------------------------------------------------------------------------------
+Summary  : Optimizer seems to incorrectly use -1 for false for C++ bool type
+
+Variables in C++ of type "bool" may have their values adjusted to -1 and
+0 instead of 0 and 1.  If an adjusted variable is the predicate of an IF,
+the comparison may not be adjusted in the same way.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq41862
+------------------------------------------------------------------------------
+Summary  : Cast of int to long as operand of uns long mult fails to extend sign
+
+A cast of a 16-bit value to 32-bit when used as the operand of a multiply
+where it will be implicitly converted to unsigned 32-bit results in the 
+16-bit value being zero-extended rather that sign-extended.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq41996
+------------------------------------------------------------------------------
+Summary  : Optimizer terminated abnormally with -o3
+
+Certain cases involving struct-typed parameters may cause optimizer
+aborts when compiling at -o3.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq42248
+------------------------------------------------------------------------------
+Summary  : optimizer is ignoring volatile qualifier when propagating constant 
+
+The optimizer is ignoring the "volatile" qualifier when deciding to 
+propagate a constant from a "const" global variable.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq42459
+------------------------------------------------------------------------------
+Summary  : optimizer generates incorrect code for do..while loop
+
+Loops whose termination depends on unsigned-integer wraparound may have
+their trip counts computed incorrectly, which may lead to the loop's
+incorrect deletion.
+
+There is code that is trying to calculate a loop's trip count, in
+general form as "N - I";  when both N and I are ICONs, which the
+optimizer computes using the literal values instead of building a
+symbolic expression, aiming to have a more precise value for the trip count.
+
+However, when the loop depends on an unsigned integer wrapping
+around, I will be 0 or greater and N can be 0, and the simple "N - I"
+gives the wrong answer.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq42677
+------------------------------------------------------------------------------
+Summary  : Optimizer issue with code involving stack objects and logical
+           operations
+
+The optimizer may incorrectly simplify A&A or A|A to just A, even if
+A has side effects -- eg, printf("x")&printf("x") would become
+printf("x").
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq43234
+------------------------------------------------------------------------------
+Summary  : Assembler accepts instruction QMPYL ACC, P, @y without error
+
+The assembler does not generate error for the following invalid 
+assembly instruction:
+    QMPYL ACC, P, @coeff
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq43434
+------------------------------------------------------------------------------
+Summary  : Compiler optimizes load followed by store incorrectly
+
+Under -o1 -ml options, compiler optimizes out a load followed by the 
+store incorrectly. 
+
+void foo(unsigned int *p, unsigned int q)
+{
+   q = p[q];    // These two statements are optimized out.
+   p[q] = q;
+}
+
+------------------------------------------------------------------------------
+Addressed Performance SDSsq43471
+------------------------------------------------------------------------------
+Summary  : __abort_execution() pulls in CIO causing codesize increase.
+
+In 4.1.0 RTS the __abort_execute() function causes CIO routines to be 
+pulled in during linking causing codesize increase.
+
+
+------------------------------------------------------------------------------
+Addressed Performance SDSsq43530
+------------------------------------------------------------------------------
+Summary  : Compiler generates both static and dynamic init for array
+           initialization
+
+Consider the following C++ code:
+
+double test [] = 
+{ 
+-18.4615,
+-18.0705,
+-18.0551,
+0
+};
+
+main()
+{
+   return 0;
+}
+
+The compiler generates .cinit section for static initialization and 
+also generates __sti__ function to dynamically initialize this array. 
+Fixed to generate only static (.cinit) initialization.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq43356
+------------------------------------------------------------------------------
+Summary  : Compiler does not set blocking flag for user defined sections
+
+The compiler tracks and optimizes DP for struct member accesses. For this to 
+work the compiler should set the blocking flag for the struct definition. If 
+the struct is defined in user defined data section, the compiler missed to 
+set the blocking flag causing incorrect struct member accesses.
+
+------------------------------------------------------------------------------
+Addressed Performance SDSsq43647
+------------------------------------------------------------------------------
+Summary  : Compiler generates DP addressing thereby increasing code size
+
+The compiler may generate increased code size in comparison to the 
+older code generation tools. 
+
+
+*******************************************************************************
+4. Fixed Issues in 4.1.0
+*******************************************************************************
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq29878 
+------------------------------------------------------------------------------
+Summary  : Assembler generated internal error for built-in function with
+           undefined argument.
+
+Assembler generated internal error when built-in function is given an 
+undefined symbol as an argument.  For example, when CONST is not defined, 
+the assembler generated
+   "INTERNAL ERROR!: illegal reloc expr node!" for the following code:
+
+   COEF    .set    $cvi(2.0 * CONST)
+
+   The assembler should generate an user error to let the user know
+   that CONST is not defined.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq30158 
+------------------------------------------------------------------------------
+Summary  : Compiler generated internal error when -pm option was used. 
+
+Compiler generated internal error for the following C++ code segment 
+when program level optimization (-pm) was used.
+
+   bool x;
+   struct { int bit : 1; } s;
+   x = 1;
+   s.bit = x;
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq34237 
+------------------------------------------------------------------------------
+Summary  : Linker crashes when file names are greater then 256 characters.
+
+The file name restriction has been removed from the linker.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq35080 
+------------------------------------------------------------------------------
+Summary  : Hex converter did not support sections bigger than 64K words.   
+
+Since the block size in the C2000 boot record format is 16-bits, the boot
+record cannot support sections of size 64K words or bigger. The hex
+converter truncated the block size to 16-bits without any warning and
+generated incorrect boot record.
+
+The hex converter is updated to split sections of size 64K words or bigger 
+into 64K-1 words or less blocks and emit boot record for each block.
+
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq35192 
+------------------------------------------------------------------------------
+Summary  : Hex converter did not list all the sections in map file
+
+The hex map file did not include all the sections reported as converted 
+if the user specifies the section list where the section addresses are 
+not strictly in increasing order.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq35764
+------------------------------------------------------------------------------
+Summary  : Codegen generates internal error when -ms option is used.
+
+With the -ms switch, the codegen attempts to abstract code from
+the prologs and epilogs into function calls to save space.  These
+function calls are defined in the rts libraries, and assembly files
+need .global directives in order to assemble/link correctly.  However,
+in this bug the .global directives were being emitted in the middle of
+a basic block incorrectly.  This has the potential to affect different
+codegen optimizations since the .global should not be seen at this
+point.  In this case, tail merge was not working correctly.  The
+codegen was updated to correctly emit abstraction symbol.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq36293
+------------------------------------------------------------------------------
+Summary  : Assembler does not warn *XARn addressing under -m20 (C2XLP mode)
+
+Indirect 3-bit offset addressing *+XARn[3-bit] is not allowed in the
+C2XLP mode. The assembler generates a warning when this addressing
+mode is used after .lp_amode directive. The addressing *XARn is an
+alias for *+XARn[0] and the assembler missed warning about the use of
+this form of indirect addressing after .lp_amode directive.
+
+Assembler was updated to issue a warning for *XARn addressing in C2XLP
+mode.  For example the following instruction now generates a warning:
+
+  .lp_amode
+  MOVL XT, *XAR7	
+  > WARNING! at line 2: [E0011] Expecting C2XLP addressing mode
+
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq36331 
+------------------------------------------------------------------------------
+Summary  : long double to double conversion results in incorrect value
+
+Long double to double rts conversion routine returned incorrect value due 
+to incorrect overflow handling.
+
+            long double ld = 2047.999960039466;
+            double d = (double) ld;
+
+            if (d > (ld + .5))
+                printf("Failed\n");
+
+RTS routines fd_tofs28.inc and fd_util28.inc are updated.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq36644
+------------------------------------------------------------------------------
+Summary  : Compiler generates bad code for IQmpy() intrinsic with -o3
+
+The use of post increment or pre-decrement operator to the following operations
+can cause the increment to occur twice:
+
+  1. __IQmpy(*a++, *b++, n)
+
+  2. __IQxmpy(*a++, *b++, n)
+
+  3. result = (long long)*a++ * (long long)*b++;
+               where 'a' and 'b' are pointers to long integer type
+
+At optimization level -o3, the compiler generates pre/post
+increment/decrement operations on both the IMPYL and QMPYL
+instructions used for these operations, resulting in the pointer
+being modified twice.  The IMPYL instruction should not be performing
+a pointer modification.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq36660
+------------------------------------------------------------------------------
+Summary  : Compiler may generate instruction with illegal operand combination.
+
+Compiler may generate instruction with illegal operand combination, causing
+an assembly error:
+    ERROR!   at line 1898: [E0004] Illegal operand combination
+                MPY       P,AL,#1000            ; |40| 
+
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq37048
+------------------------------------------------------------------------------
+Summary  : while loop with default case in a switch stalls the optimizer
+           indefinite
+
+while loop with default case in a switch stalls the optimizer 
+indefinitely.  Can get the following test case compiled after removing 
+the default case in the switch.
+
+#define STATE	0x00
+#define DELAY	15000
+
+void main()
+{
+    unsigned short int           v_state;
+    while(1)
+    {
+        switch (v_state)
+        {
+            case STATE:
+            {
+                break;
+            }
+			default:
+            {
+                break;
+            }
+        }
+    }
+}
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq37158
+------------------------------------------------------------------------------
+Summary  : FS$$TOU saturate result to 8000h instead of 7fffh if float value >
+           65535
+
+Bug in floating point emulation RTS function FS$$TOU: If the floating
+point value is higher than 65535, the result incorrectly saturates to
+value 0x8000 rather than 0xFFFF as it should.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq37207
+------------------------------------------------------------------------------
+Summary  : Internal error compiling (E, call()) if call returns a structure
+
+The compiler may abort with an internal error on an expression where a 
+comma-operator has an operand which is a function call, as in: "s1 = 
+(E, call());". For this failure to occur, two additional conditions 
+are required: 1) the call returns a structure type, and 2) the result 
+of the expression is used (for example, in an assignment or other 
+expression). The compiler aborts with a message such as: ">> foo.c, 
+line 7: INTERNAL ERROR: no match for SCOMMA".
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq37212
+------------------------------------------------------------------------------
+Summary  : narrowing cast of volatile expression incorrectly narrows memory
+           operand
+
+When an expression which reads a memory object is cast to a narrower
+type, the compiler optimizes the memory reference by narrowing the type
+to the type it will eventually be cast to.  That is, the compiler
+doesn't bother to load the extra bytes that are going to be ignored,
+anyway.  However, this optimization is not legal for volatile objects. 
+Such objects must always be accessed with exactly the type of the object.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq37472
+------------------------------------------------------------------------------
+Summary  : Compiler generates incorrect code for back to back int divide
+
+The c28x compiler generated incorrect code for back to back 16-bit   
+divide. Consider the following code:
+
+          int s3 = -1, s4 = -1;
+          unsigned int c = 1;
+          unsigned int ay = 100;
+
+          ay /= (s3 * s4) / c;
+
+Compiler generated code that resulted in ay getting 3 instead of 100.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq37516
+------------------------------------------------------------------------------
+Summary  : optimizer seems to assume that pointers inside certain loops are 16
+           bits
+
+The optimizer assumes that pointers inside certain for loops are 16 
+bits. For example, the following code prints 'page: (0).' instead of 
+'page: (B).' when compiled for large model (-ml) with -o2 optimization.
+
+  -------------example translation unit----------------
+
+    uint16 get_mem_page(uint16 *address, uint16 n)
+    {
+      uint16 i = 0;
+      uint32 current_page = 0;
+
+      for (i = 0; i < n; i++) {
+	 current_page = ((uint32) address) >> 16;
+	 address = (uint16 *) (current_page << 16);
+      } 
+
+      return (uint16) current_page;
+    }
+
+    int main(void)
+    {
+      uint16 page = get_mem_page((uint16 *) 0x00BABBA, 1);
+      
+      printf("page: (%X).\n", page);
+
+      return 0;
+    }
+
+  -----------------------------------------------------
+
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq37603
+------------------------------------------------------------------------------
+Summary  : Compiler generates illegal assembly instruction 
+
+In C28x mode, FP the frame pointer is set to XAR2. When the frame size 
+is greater than 128 words, the following code is generated in function 
+prolog.
+
+  MOVZ AR2, SP
+  SUB  FP, #imm
+
+The SUB instruction can only accept AR2 and not XAR2. This generated an
+assembly error. Fixed compiler to generate correct instruction.
+
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq37645
+------------------------------------------------------------------------------
+Summary  : Optimizer produces code which generates an infinite loop
+
+Use of a shift-and-assign sequence ('var<<=expr' or equivalent) 
+assigning to a variable used in an expression controlling the loop can 
+result in an infinite loop.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq37765
+------------------------------------------------------------------------------
+Summary  : Calls to RTS function within runtime library should be LB instead of
+           B
+
+The RTS routine FS$$SUB branches to FS$$ADD routine 
+
+The RTS function FS$$SUB uses normal branch (B) instructions to branch
+to FS$$ADD routine.  When FS$$ADD is placed outside the 16-bit offset range 
+of the FS$$SUB branch instruction, the linker generates an offset overflow
+error.
+
+To fix this problem, FS$$SUB routine is placed in the file fs_add28.inc 
+along with the FS$$ADD routine. This also helps to optimize the FS$$SUB 
+function.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq37805
+------------------------------------------------------------------------------
+Summary  : Linker creates .out file even after error message
+
+The linker generated an .out file even after generating some errors
+such as Relocation Overflow.  If automated link processes are used,
+the return value from the linker in the command shell wasn't giving an
+error, thus giving false indication that the build was successful.
+Updated the linker to stop processing after the error and exit with an
+error code.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq37921
+------------------------------------------------------------------------------
+Summary  : Compiler incorrectly places certain code in .const
+
+The code generator may incorrectly place code in the .const section 
+because it assumes it is being directly initialized even when it is 
+not.
+
+If a constant C++ array object is initialized with both a integer value 
+and a class member object, it is possible that the array object will be 
+placed in the .const section but also dynamically initialized at run 
+time.  For example,
+class X
+{
+   public:
+     static const int a;
+};
+static const int arr[] = { 0, X::a };
+
+In this example, the array is placed in the .const section and its
+first element is initialized as 0.  The second element is then
+initialized in the __sti function that is called at boot time.  The
+bug here is that the .const section should not be written to at run.
+The bug fix is that the codegen will now recognize this situation and
+place these objects in the .bss section.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq38036
+------------------------------------------------------------------------------
+Summary  : Tail merging could merge into an entry block
+
+It is possible with a case where a loop is merged with an entry block,
+that the loop branch will be to the entry block label if tail merging
+merges into an entry block and the entire block matches.  Since tail
+merge occurs before the prolog is generated, this would be an
+incorrect branch.
+
+This will only occur if the entire entry block is merged.  The code
+generator will now split the entry block, which will ensure the label
+will be placed after the prolog code.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq38067
+------------------------------------------------------------------------------
+Summary  : Under certain conditions, the C2000 parser crashes      
+
+Description: A memory corruption problem was experienced in the parser when 
+there was an initialized local static variable in a dead extern inline 
+function (or a member function) as shown below:
+
+  -------------example translation unit----------------
+  
+  class xyzzy 
+  {
+     inline int deadfunc(int i) const
+     {
+         static const int local_static_variable[3] = { 1, 2, 3 };
+  
+         return local_static_variable[i];
+     }
+  }
+
+  -----------------------------------------------------
+
+This caused the parser to segfault. Fixed the memory corruption problem in 
+the parser.
+
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq38125
+------------------------------------------------------------------------------
+Summary  : CG crashes on Linux and PC when -ms option is used.
+
+C2000 codegen crashes on PC and Linux when -ms switch (optimize for size) is 
+used with optimization (-o[0-3]). The compiler has been updated to fix this 
+bug.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq38248
+------------------------------------------------------------------------------
+Summary  : INTERNAL ERROR: no match for VREG is generated
+
+The compiler may abort with an internal error on an expression where a 
+comma-operator has an operand which is a function call, as in: "s1 = 
+(E, call());". For this failure to occur, two additional conditions 
+are required: 1) the call returns a structure type, and 2) the result 
+of the expression is used (for example, in an assignment or other 
+expression). The compiler aborts with a message such as: ">> foo.c, 
+line 7: INTERNAL ERROR: no match for SCOMMA".
+
+The problematic code sequence may result from calling a C++ virtual 
+function.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq38362
+------------------------------------------------------------------------------
+Summary  : Linker conditional linking ignores -u symbol inclusion
+
+If an input section containing the definition of a -u symbol is also a
+candidate for conditional linking, the linker may erroneously exclude
+that section from the link if the symbol is not referenced by any other
+part of the application.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq38660
+------------------------------------------------------------------------------
+Summary  : Linker generates bad error about multiple mappings of sub-sections
+
+The linker may generate a bad error message about trying to map
+an input section to multiple output sections if the input section
+is a subsection that has already been allocated when there is a
+reference to the subsection's base name in a subsequent output
+section specification.
+
+SECTIONS
+{
+   OS1: { file.obj(.scn:_sub) } > MEM1
+   OS2: { file.obj(.scn)      } > MEM2
+}
+
+In the above example, the linker will generate an error about trying
+to add ".scn:_sub" to multiple output sections when the reference to
+"file.obj(.scn)" is being processed.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq38729
+------------------------------------------------------------------------------
+Summary  : The C code 'printf("%+.0f", .001)' should print '+0' instead of '+0.'
+
+Updated the rts function _pconv() to fix this bug. Now the C code 
+'printf("%+.0f", .001)' prints '+0'.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq39061
+------------------------------------------------------------------------------
+Summary  : Assembler does not generate error for 'ADD *XAR0' instruction.  
+
+The assembler builds without any error when the instruction 'ADD ACC,*XAR0' 
+is incorrectly written as ADD *XAR0. Updated the assembler to emit the 
+following error message:
+ ERROR!   at line 1: [E0005] Missing operand(s)
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq39657
+------------------------------------------------------------------------------
+Summary  : CG crashes under certain conditions.
+
+Codegen crashes while compiling a statement with following conditions:
+  1. A structure assign statement,
+  2. RHS has a comma operation,
+  3. The value assigned is a structure return value from a function and 
+  4. The structure's size and alignment are same as a scalar integer type.
+
+For example:
+   struct st1 { int a; };
+   struct st1 foo();
+
+   volatile int aa;
+   volatile struct st1 s1;
+
+   main()
+   {
+      struct st1 A;
+      A = (aa++, foo());   // Statement causes codegen to crash.
+   }
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq39934
+------------------------------------------------------------------------------
+Summary  : Shell no longer understands -stack400h as correct hex value
+
+Compiler/linker does not correctly parse command-line hex numbers of 
+the using the trailing indicators, i.e ABCDh for a hex number or 6543Q 
+for an octal number.  Numbers of the form 0xABCD and 06543 are parsed 
+correctly.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq40166
+------------------------------------------------------------------------------
+Summary  : Compiler unnecessarily sets blocking flag for user named data
+           section
+
+The compiler unnecessarily sets the blocking flag for an 
+uninitialized, constant data structure in a user named section.
+
+Consider the following code:
+
+struct MyStruct {
+         unsigned int  x[65];      // array of 16-bit words
+     };
+
+#pragma DATA_SECTION(test, "TestMem");
+const struct MyStruct test;
+
+The assembly created by the compiler is:
+_test:    .usect    "TestMem",65,1,0
+
+The compiler uses a .usect directive that contains the BLOCKING flag 
+for the linker, which means that the section TestMem will start on a 
+data page boundary. This creates a memory hole that goes to waste.
+
+The compiler should not be blocking user named data sections as no DP 
+optimization is done on them. It should only set the blocking flag 
+for .bss/.ebss sections.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq40616
+------------------------------------------------------------------------------
+Summary  : Compiler generated incorrect code for bitwise AND operation.    
+
+Compiler generated incorrect code when the result of int type bitwise
+AND operation is typecast and stored in a long variable.
+
+     unsigned int var_ui  = 0x0001;
+     unsigned long var_ul = 0x01234567;
+     var_ul = (unsigned long)(var_ui & 0xff);
+
+The above code, var_ul gets 0x1234501 instead of 0x4501.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq40666
+------------------------------------------------------------------------------
+Summary  : Compiler generated incorrect code for IQxmpy() intrinsic when
+           N is 0.
+
+The IQxmpy() intrinsic multiplies two different Q numbers to generate the
+result in a third Q number format. The intrinsic format is
+long dst = IQxmpy(src1, src2, N) where N is Qdst - (Qsrc1 + Qsrc2).
+The intrinsic generates code which multiplies two 32 bit numbers to generate
+a 64-bit result and the result is scaled based on the input and output Q
+number. The scaling factor is 32 - N. When N is zero this means the upper
+32-bits of the multiplication result is needed.
+
+The compiler generated IMPYL instruction which calculates the lower 32 bit
+result. It should have generated QMPYL which generates the upper 32-bit
+result.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq40754
+------------------------------------------------------------------------------
+Summary  : 'long long' / 'int' generates incorrect results when using
+           optimization
+
+The compiler generates incorrect code for dividing a 'long long' by 
+and 'int' when using -o2 or -o3 on the following example --
+
+typedef struct S {int a; } S;
+S foo;
+
+void f (S *p, long long q, int r)
+{
+    p->a = q / (long long) r;
+    printf("p->a = %d (should be 1234)\n", p->a);
+}
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq40887
+------------------------------------------------------------------------------
+Summary  : Optimizer appears to hang on call with very long arg list
+
+Optimizer may appear to hang when given a function call with a very long
+argument list -- 33 arguments in this case.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq41014
+------------------------------------------------------------------------------
+Summary  : Linker -f fill option allows 32-bit signed int instead of unsigned
+           int
+
+The compiler/linker accepts only SIGNED values for the -f (linker fill)
+option.  For example, for C6x only values <= 0x7FFF FFFF are accepted.
+
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq41139
+------------------------------------------------------------------------------
+Summary  : Linker computes wrong value for GROUP's SIZE() operator
+
+The linker will not properly compute the LOAD_SIZE() or RUN_SIZE()
+of a GROUP that contains both initialized and un-initialized members
+if the GROUP also has separate load and run placements.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq41236
+------------------------------------------------------------------------------
+Summary  : __IQxmpy() intrinsic generated incorrect value when a negative
+           N is passed in a variable.
+
+The IQxmpy() intrinsic multiplies two different Q numbers to generate the
+result in a third Q number format. The intrinsic format is
+long dst = IQxmpy(src1, src2, N) where N is Qdst - (Qsrc1 + Qsrc2).  When 
+N is not a constant, the library function __IQXMPY() is called. Due to 
+a bug in this RTS function, incorrect value was generated when N is negative.
+
+   volatile int n1 = -12;
+
+   if (__IQxmpy(__IQ(120.34, 20), __IQ(340.12,20), n1) != 0x9fe)
+      error();
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq41330
+------------------------------------------------------------------------------
+Summary  : Optimizer is giving segmentation fault error when using -o2 or -o3
+
+A loop preceded by a call to _assert(), if the intervening control flow
+is complicated and branches over the loop, may cause the optimizer to
+hang or crash.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq41459
+------------------------------------------------------------------------------
+Summary  : Optimization causes wrong result with casted variable
+
+Optimization of
+
+double a = 0.0001;
+i -= (int)a;
+
+will be incorrect, because the cast is erroneously moved above the
+subtraction, which is then done in floating-point.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq41482
+------------------------------------------------------------------------------
+Summary  : Optimizer crash with "x += a && b"
+
+Statements of the form "x += a && b" may cause the optimizer to crash.
+
+------------------------------------------------------------------------------
+Fixed Bug SDSsq41574
+------------------------------------------------------------------------------
+Summary  : Compiler emits PSEUDO symbol causing assembly error            
+
+Under optimization, code with repeated 32-bit add could generate ADDL 
+instruction with a symbol called 'PSEUDO' instead of valid register. This
+generates assembly error. 
+
+"foo.asm", ERROR!   at line 768: [E0003] Syntax error - Operand 2
+	        ADDL      XT,PSEUDO
+
+"foo.asm", ERROR!   at line 768: [E0004] Illegal operand combination
+	        ADDL      XT,PSEUDO
+
+
+*******************************************************************************
+5. New Features in 4.1.x                   
+*******************************************************************************
+
+------------------------------------------------------------------------------
+5.1.  Default DWARF2 debug format
+------------------------------------------------------------------------------
+
+The TMS320C2000 C/C++ Code Generation Tools support the generation of DWARF
+symbolic debug information in the output object code.  The DWARF debug output
+contains detailed type information about objects and functions used in an
+application.  This is the default debug information generated with the -g
+shell switch.  The compiler will normally generate some amount of DWARF debug
+information, even without the -g switch.  This may include information on
+functions, files, and global variables.  This information does not hinder
+any optimizations.
+
+It is possible to disable the generation of all symbolic debugging with the
+use of the -gn shell switch.
+
+Previous releases of the compiler generated STABS debug information by
+default.  The compiler can still generate STABS if necessary.  This
+is available with the -gt shell switch.
+
+Debug type merging and type checking are performed by default in the linker.
+Any type inconsistencies in the uses of symbols from different object files
+are now reported.  This feature can be turned off by passing the -b switch to
+the linker.   
+
+------------------------------------------------------------------------------
+5.2. 64-bit (long long) Integer Support
+------------------------------------------------------------------------------
+
+The TMS320C28x Compiler now supports the following new data types. The range 
+values are available as standard macros in the header file limits.h.
+
+-------------------------------------------------------------------------------
+Type                Size     Representation    Minimum             Maximum 
+                                               Value               Value
+-------------------------------------------------------------------------------
+long long        
+signed long long    64bits   2's        -9223372036854775808 9223372036854775807
+                             complement  
+
+unsigned long long  64bits   Binary             0           18446744073709551615
+-------------------------------------------------------------------------------
+
+The long long data types are stored in ACC:P or XARn:XARn+1. In memory they 
+are stored as 64-bit objects at double word (32-bit) aligned addresses. The 
+ordering of the bytes in the 64-bit object is little endian. For example the 
+value 0x0011223344556677 will be stored as follows:
+
+	Address x  	44556677
+	Address x+2 	00112233
+
+long long integer constant can have an "ll" or "LL" suffix. Without the suffix
+the value of the constant will determine the type of the constant. 
+
+The formatting rules for long long in C I/O require "ll" in the format string.
+For example:
+
+printf("%lld", 0x0011223344556677);
+printf("%llx", 0x0011223344556677);
+
+The C28x function calling convention for the type long long is as follows:
+1. First long long argument is passed in ACC:P.
+2. Remaining long long arguments are passed on the stack.
+3. Function returns long long data in ACC:P
+
+The following new library functions are added:
+llabs(), strtoll() and strtoull().
+
+Please refer to the Optimizing C Compiler User's Guide for more information.
+
+------------------------------------------------------------------------------
+5.3. Compiler optimizations
+------------------------------------------------------------------------------
+5.3.1 32-bit addition was optimized to generate smaller, faster code.
+
+5.3.2 Repeat MAC/IMPYL/QMPYL optimization.
+
+Compiler can now generate RPT || MAC instruction for most vector dot product
+code when compiled for unified memory with optimization (-mt -o[2|3]).
+
+Consider the following function:
+
+long vp(short *data, short *coef, unsigned short taps)
+{
+    int i;
+    long sum = 0;
+    for(i=0; i<taps; i++)
+       sum += (long)*data++ * (long) *coef++;
+
+    return sum;
+}
+
+Compiler will generate the following code for the for loop.
+
+        MOV       P,#0
+        RPT       AR6
+||      MAC       P,*XAR5++,*XAR7++
+        ADDL      ACC,P
+
+Similar optimizations have been added to generate RPT || QMACL and RPT || IMACL.
+
+4.3.3 MIN/MAX optimization
+
+Compiler can now recognize C code for finding minimum or maximum of two values
+and generate MIN(L)/MAX(L) instruction. For example, for the following C code
+
+    long  min(long a, long b)
+    {
+	return (a < b) ? a : b;
+    }
+
+compiler will generate,
+
+_min:
+        MOVL      XAR6,ACC      
+        MOVL      ACC,*-SP[4]  
+        MINL      ACC,XAR6    
+        LRETR
+
+------------------------------------------------------------------------------
+5.4. Compiler Instrinsics for norm operation
+------------------------------------------------------------------------------
+The following new intrinsics are available in C28x compiler 4.00.
+
+long dst      = __norm32(long src,      int *shift)
+long long dst = __norm64(long long src, int *shift);
+
+These intrinsics normalize a 32-bit or 64-bit input and also updates shift
+with the number of bits shifted to normalize the input.
+
+__norm32() generates the following code:
+
+        CSB ACC
+        LSLL ACC, T
+        MOV  mem, T
+
+
+__norm64() generates the following code:
+
+        CSB     ACC
+        LSL64   ACC:P, T
+        MOV     shift, T
+        CSB     ACC
+        LSL64   ACC:P, T
+        MOV     TMP, AH
+        MOV     AH, T
+        ADD     shift, AH
+        MOV     AH, TMP
+
+------------------------------------------------------------------------------
+5.5.  Change in Banners, New Compiler Option -version
+------------------------------------------------------------------------------
+Running the tools (by invoking cl2000) no longer produces various banners
+and trace information.  The -version option will display the tool version 
+numbers.  The Build Number provides a unique identifier which allows TI to 
+identify exactly which build of this version of the code generation tools 
+that you are using.
+
+cl2000 -version
+TMS320C2000 C/C++ Compiler        Version X.XX
+Build Number 1DJTO-60O0J7H8-UASQC-VAV-DZAZH_U_QQ_1S
+
+TMS320C2000 C/C++ Parser          Version X.XX
+Build Number 1DJTO-60O0J7H8-UASQC-VAV-DZAZH_U_QQ_1S
+TMS320C2000 C/C++ File Merge      Version X.XX
+Build Number 1DJTO-60O0J7H8-UASQC-VAV-DZAZH_U_QQ_1S
+TMS320C2000 C/C++ Optimizer       Version X.XX
+Build Number 1DJTO-60O0J7H8-UASQC-VAV-DZAZH_U_QQ_1S
+TMS320C2000 C/C++ Codegen         Version X.XX
+Build Number 1DJTP-60O0J7H8-UASQC-VAV-DZAZH_U_QQ_1S
+TMS320C2000 COFF Assembler        Version X.XX
+Build Number 1DJTO-60O0J7H8-UASQC-VAV-DZAZH_U_QQ_1S
+TMS320C2000 Embed Utility         Version X.XX
+Build Number 1DJTO-60O0J7H8-UASQC-VAV-DZAZH_U_QQ_1S
+TMS320C2000 C Source Interlister  Version X.XX
+Build Number 1DJTO-60O0J7H8-UASQC-VAV-DZAZH_U_QQ_1S
+TMS320C2000 COFF Linker           Version X.XX
+Build Number 1DJTO-60O0J7H8-UASQC-VAV-DZAZH_U_QQ_1S
+TMS320C2000 Absolute Lister       Version X.XX
+Build Number 1DJTO-60O0J7H8-UASQC-VAV-DZAZH_U_QQ_1S
+TMS320C2000 Strip Utility         Version X.XX
+Build Number 1DJTP-60O0J7H8-UASQC-VAV-DZAZH_U_QQ_1S
+TMS320C2000 Post Link Optimizer   Version X.XX
+Build Number 1DJTO-60O0J7H8-UASQC-VAV-DZAZH_U_QQ_1S
+TMS320C2000 XREF Utility          Version X.XX
+Build Number 1DJTO-60O0J7H8-UASQC-VAV-DZAZH_U_QQ_1S
+TMS320C2000 C++ Demangler         Version X.XX
+Build Number 1DJTP-60O0J7H8-UASQC-VAV-DZAZH_U_QQ_1S
+TMS320C2000 COFF/Hex Converter    Version X.XX
+Build Number 1DJTO-60O0J7H8-UASQC-VAV-DZAZH_U_QQ_1S
+TMS320C2000 Library Builder       Version X.XX
+Build Number 1DJTO-60O0J7H8-UASQC-VAV-DZAZH_U_QQ_1S
+TMS320C2000 Name Utility          Version X.XX
+Build Number 1DJTO-60O0J7H8-UASQC-VAV-DZAZH_U_QQ_1S
+TMS320C2000 Object File Display   Version X.XX
+Build Number 1DJTO-60O0J7H8-UASQC-VAV-DZAZH_U_QQ_1S
+TMS320C2000 Archiver              Version X.XX
+Build Number 1DJTO-60O0J7H8-UASQC-VAV-DZAZH_U_QQ_1S
+
+------------------------------------------------------------------------------
+5.6.  New Object File Utilities (nm2000, strip2000, ofd2000)
+------------------------------------------------------------------------------
+
+The following new object file utilities have been added.  See the Compiler
+User's Guide for a complete description.
+
+The object file display utility, ofd2000, is used to print the contents of
+object files (.obj), executable files (.out), and/or archive libraries
+(.lib) in both text and XML formats.
+
+The nm2000 utility prints the list of names defined and referenced in a COFF 
+object (.obj) or executable file (.out).  The value associated with the symbol
+and an indication of the kind of symbol is also printed.
+
+The strip2000 utility removes STABS abd DWARF debug information from a COFF
+object (.obj) or executable file (.out).
+
+------------------------------------------------------------------------------
+5.7  User controlled assembler fill values (--asm_code_fill, --asm_data_fill)
+------------------------------------------------------------------------------
+ 
+The TMSC2000 C/C++ Shell and Assembler now supports user specified fill 
+values to fill the holes created by the assembler. 
+
+The '.align [aln]' assembler directive aligns the section program counter 
+(SPC) to 'aln' word boundary. The assembler might create holes to align 
+the SPC.  These holes were filled with NOP instructions for data and code 
+sections.  The assembler has been changed to use the default values zero 
+for data sections and NOP instructions for code sections.
+
+A code section is defined as either .text section or any section that has
+an instruction to encode. The following are considered code sections.
+
+Example 1:
+	.text
+	.field 0x100, 16
+
+Example 2:
+	.data
+	.field 0x100, 16
+	 mov 	al, #1
+
+Example 3:
+	.sect "MyProg"
+	mov	al, #0
+
+Any section other than .text section is considered a data section if
+it does not have any instruction to encode. For example, 
+
+	.sect "MyData"
+	.field 0x100, 16
+
+The assembler now supports --asm_code_fill and --asm_data_fill options to 
+allow the user to specify the fill values for the code sections and data
+sections respectively. The user can specify a 16-bit value with these options
+in decimal (4660), octal (011064) or hexadecimal (0x1234) format.
+
+For example consider the following assembly code:
+
+        .sect   "MyData"
+        .align  1
+        .field          0x01,16 
+        .align  2
+        .field          0x00010002,32
+
+        .sect   "MyProg"
+        .align  1
+        mov     ah, #0
+        .align  2
+        mov     acc,#1234 << 5
+
+
+cl2000 -v28 --asm_code_fill=0x1234 --asm_data_fill=0x2345 test.asm
+
+The object encoding is as follows:
+
+MyData:
+00000000   0001
+00000001   2345	      <Fill Value>
+00000002   0002
+00000003   0001
+
+MyProg:
+00000000   9b00       MOVB      AH, #0x0
+00000001   1234       <Fill Value>
+00000002   ff25       MOV       ACC, #0x4d2 << 5
+00000003   04d2
+
+-------------------------------------------------------------------------------
+5.8. Calling the Assembler and Linker Directly is Deprecated
+-------------------------------------------------------------------------------
+To allow for future restructuring of the underlying technology of the Code
+Generation Tools direct invocation of the C2000 assembler (asm2000) and linker
+(lnk2000) is deprecated.  Invocation should always be made via cl2000. Existing
+options for both the assembler and linker will continue to be supported but 
+all new options are available only through cl2000.
+
+Please refer to the Optimizing C Compiler User's Guide for using assembler and
+linker options from cl2000.
+
+------------------------------------------------------------------------------
+5.9.  Added __ioport keyword
+------------------------------------------------------------------------------
+
+The keyword "__ioport" has been added to the compiler.  This keyword
+works exactly like "ioport", but are available even when compiling in 
+strict "ANSI C" mode.  
+
+------------------------------------------------------------------------------
+5.10. Summary of Removed/Deprecated Options
+------------------------------------------------------------------------------
+o -gp      : this option has been deprecated for the v4.1.0 compiler; by 
+             default enough debug information is added to your code for 
+             function-level profiling (use --symdebug:profile_coff if you
+             want to use the older debug format for profiling)
+o -gw      : this option has been deprecated for the v4.1.0 compiler; use
+             --symdebug:dwarf
+
+------------------------------------------------------------------------------
+5.11. The -d Compiler Option Can Be Used to Define a Quoted String
+------------------------------------------------------------------------------
+If you want to define a quoted string and keep the quotation marks, then for 
+Unix use -dXXX='"string def"' and for PC use -dXXX="\"string def\""
+
+For Code Composer Studio projects, these will need to be defined in a text
+options file and included in the project with the -@ option.
+
+------------------------------------------------------------------------------
+5.12. Compiling with -pm and File-Specific Options in Code Composer Studio
+------------------------------------------------------------------------------
+In Code Composer Studio, when the -pm option (Program Level Optimization)
+option is used, C and C++ files that have the same options will be compiled 
+together.  However, if any file has a file-specific option that is not 
+selected as a project-wide option, that file will be compiled separately even
+though program-level optimization has been specified.  To compile all C and 
+C++ files together, make sure the files do not have file-specific options.  
+
+------------------------------------------------------------------------------
+5.13. Sharing C Header Files With Assembly Source                  
+------------------------------------------------------------------------------
+The .cdecls directive has been introduced into the Assembler to allow
+programmers to use C header files in assembly code.  User documentation for 
+this feature is included in Annex A001 at the end of this chapter of the 
+Release Notes.
+
+------------------------------------------------------------------------------
+5.14. Support for C++ Exceptions                                   
+------------------------------------------------------------------------------
+The C++ compiler and run-time libraries now implement exception handling as
+defined by the ISO 14882 C++ Standard.
+
+The compiler supports the C++ statements (try, catch and throw) that implement
+the exception handling feature.  Since the overhead associated with using this
+facility is costly, the support is activated only when the --exceptions command
+line option is specified.  In addition, a program using exception handling must
+be linked with a run-time library containing the necessary support.  The
+libraries with "_eh" in the library name support exception handling.  For
+example, if you normally use rts2800_ml.lib and enable exception handling, 
+then you need to use the run-time library rts2800_ml_eh.lib.
+  
+For exceptions to work correctly, ALL C++ code in the program must be compiled
+with the --exceptions option, regardless of whether exceptions are used in a
+particular file.  There is no checking to prevent exception-enabled code from
+being mixed with non-exception code.
+
+When the --exceptions option is used, the compiler pre-defines the preprocessor
+symbol __EXCEPTIONS. You can use this to conditionally compile code for use with
+or without exceptions.
+
+------------------------------------------------------------------------------
+5.15. Expanded Assembler Option -D (and -ad)                       
+------------------------------------------------------------------------------
+Previously the -D option (and -ad option) could be used to equate a symbol to a
+constant numeric value acting as the equivalent of a .set directive.  This 
+option has been extended to allow a symbol to be equated to a string, the option
+acting as the equivalent of an .asg directive.  The syntax of this option
+remains the same, -Dname=[value], except that when 'value' is a non-numeric
+string, the new form is invoked.  Note that when 'value' is empty, 1 is used as
+the default operand.
+
+------------------------------------------------------------------------------
+5.16. Pragmas to Control Diagnostic Messages
+------------------------------------------------------------------------------
+The following pragmas may be used to control diagnostic messages in the same
+ways as the corresponding command line options:
+
+  pragma                     option      meaning
+
+  #pragma diag_suppress id   -pds=id     Suppress diagnostic <id>
+  #pragma diag_remark   id   -pdsr=id    Treat diagnostic <id> as a remark
+  #pragma diag_warning  id   -pdsw=id    Treat diagnostic <id> as a warning
+  #pragma diag_error    id   -pdse=id    Treat diagnostic <id> as an error
+
+  #pragma diag_default  id   N/A         Use default severity of the diagnostic
+
+The pragma syntax is the following:
+  #pragma diag_xxx [=] error_number_or_tag, error_number_or_tag ...
+
+The diagnostic affected is specified using either an error number or an error
+tag name. The "=" is optional. Any diagnostic may be overridden to be an error,
+but only diagnostics with a severity of discretionary error or below may have
+their severity reduced to a warning or below, or be suppressed. The
+diag_default pragma is used to return the severity of a diagnostic to the one
+that was in effect before any pragmas were issued (i.e., the normal severity of
+the message as modified by any command-line options).
+
+The diagnostic identifier number is output along with the message when the
+-pden command line option is specified.
+
+------------------------------------------------------------------------------
+5.17 BOOT ROM support for I2C port in Hex Converter
+------------------------------------------------------------------------------
+
+The v4.3.0 C2000 hex converter utility included in this release has support 
+for F2808 boot loader. Specifically, support for I2C port has been added.
+
+The following command line options are added to the hex conversion utility
+to support the Boot loader. These options should be specified after -boot
+option.
+
+    -i2c8          : Specify the source of boot table loader as I2C port.
+
+    -i2cpsc value  : Specify the initial value for the I2CPSC register. Value
+                     is 16-bits and valid only for -i2c8 and ignored for other
+                     boot formats. Value is truncated to 16-bits.
+
+    -i2cclkh value : Specify the initial value for the I2CCLKH register. Value
+                     is 16-bits and valid only for -i2c8 and ignored for other
+                     boot formats. Value is truncated to 16-bits.
+
+    -i2cclkh value : Specify the initial value for the I2CCLKH register. Value
+                     is 16-bits and valid only for -i2c8 and ignored for other
+                     boot formats. Value is truncated to 16-bits.
+
+
+*******************************************************************************
+6. New Linker Features in 4.1.x
+*******************************************************************************
+
+------------------------------------------------------------------------------
+6.1. New --default_order linker switch
+------------------------------------------------------------------------------
+
+The default linker algorithm to allocate sections not listed in a linker
+command file changed.  The new algorithm is a sized-based algorithm.  This 
+meant applications relying on the old behavior encountered linker errors.  
+The old behavior is available with a new linker switch, --default_order. 
+For example:
+
+cl2000 file.c -z --default_order lnk.cmd ...
+
+------------------------------------------------------------------------------
+6.2. Updated Linker Allocation Errors
+------------------------------------------------------------------------------
+
+The diagnostic message that is printed when the linker fails to allocate an
+output section has been updated. When allocation fails, the linker will now
+find information about all of the memory areas that it is trying to
+allocate a given output section into.  The diagnostic message will look like
+this:
+
+>>   error: can't allocate named_sect, size 00004054
+              (page 0) in P_MEM (avail: 00000300),
+              MEM2 (avail: 00000bf4), D_MEM (avail:
+              00000500)
+
+where "named_sect" is a given output section and P_MEM, MEM2, and D_MEM are the
+memory areas that we could allocate named_sect into (if we had the available
+space).  Each memory area is annotated with the size of its largest available
+ANODE.
+
+
+------------------------------------------------------------------------------
+6.3.  Allocation Using Multiple Memory Areas
+------------------------------------------------------------------------------
+
+The linker now supports an improved method for allocating an output
+section into multiple memory areas.  This capability is an extension to 
+the existing allocation specification syntax.  Consider the following example:
+
+   MEMORY
+   {
+      P_MEM1: origin = 02000h, length = 01000h;
+      P_MEM2: origin = 04000h, length = 01000h;
+      P_MEM3: origin = 06000h, length = 01000h;
+      P_MEM4: origin = 08000h, length = 01000h;
+   }
+
+   SECTIONS
+   {
+      .text: { } > P_MEM1 | P_MEM2 | P_MEM4
+   }
+
+The ".text" output section is allocated in one piece in the first memory 
+area in which it fits.  That is, the linker will attempt to allocate the 
+".text" output section in the P_MEM1 area first.  If that fails, it will 
+attempt to allocate the ".text" output section in the P_MEM2 memory area,
+then P_MEM4.  If the allocation is not successful in any of the named memory
+areas, then the linker will emit an error to indicate the failed allocation 
+of the ".text" section.
+
+See section 7.8.4 in the TMS320C2000 Assembly Language Tools User's Guide.
+
+------------------------------------------------------------------------------
+6.4.  Automatic Splitting of Code/Data Among Non-Contiguous Memory Areas
+------------------------------------------------------------------------------
+
+Some embedded systems may call for a non-contiguous memory map in which
+you would like to distribute code or data among more than one memory area.
+In previous versions of the linker, you would have to manually specify
+which input sections were to go in which memory area.  This was done by
+specifying multiple output sections and separately allocating them.
+Consider the following example:
+
+Now, the linker has the capability to split output sections among
+multiple memory areas to automatically achieve an efficient allocation
+of the output section among several memory areas.  This is done using
+a ">>" operator to indicate that an output section is permitted to
+be split, if needed.
+
+You may also use the ">>" split operator to indicate that an output
+section can be split within a single memory area.  This is useful
+when several output sections must be allocated into the same memory
+area, and the restrictions placed on one of the output sections causes
+the memory area to be partitioned such that the previous linker would
+require a complicated SECTIONS directive to effectively utilize all of the
+available memory in the area.
+
+See Section 7.8.5 in the TMS320C2000 Assembly Language Tools User's Guide.
+
+------------------------------------------------------------------------------
+6.5.  Defining Load-Time Addresses and Dimensions at Link-Time
+------------------------------------------------------------------------------
+
+The code generation tools currently support the ability to load program
+code in one area of (slow) memory and run it in another (faster) area.
+This is done by specifying separate load and run addresses for an output
+section or group in the linker command file, then executing a sequence of
+instructions (the copying code) that moves the program code from its load
+area to its run area before it is needed.  New features have been added
+to the linker command file syntax to facilitate this process.
+
+See section 7.13.5 in the TMS320C2000 Assembly Language Tools User's Guide.
+
+------------------------------------------------------------------------------
+6.6.  Specifying Library Members as Input Sections
+------------------------------------------------------------------------------
+
+The linker command file syntax has been extended to provide a mechanism for
+specifying one or more members of an object library for input to an output
+section.
+
+The syntax for such an allocation is:
+
+SECTIONS
+{
+   .output_sec
+   {
+      [-l]lib_name<obj1 [obj2...objn]> (.sec_name)
+   }
+}
+
+In this syntax, the lib_name is the archive library. The -l is optional, since 
+the library search algorithm is always used to search for the archive. Brackets 
+(<>) are used to specify the archive member(s). The brackets may contain one 
+or more object files, separated by a space. The sec_name is the archive section 
+to be allocated.
+
+For example:
+
+SECTIONS
+{
+   .boot > BOOT1
+   {
+      -l rts2800.lib<boot.obj exit.obj strcpy.obj> (.text)
+   }
+   .rts > BOOT2
+   {
+      -l rts2800.lib (.text)
+   }
+   .text > RAM
+   {
+      * (.text)
+   }
+}
+In the specification above, the .text sections of boot.obj, exit.obj, and 
+strcpy.obj from rts2800.lib will be placed in the .boot section.
+
+The remainder of the .text sections from rts2800.lib will be placed in the 
+.rts section.
+
+All other unallocated .text sections will be placed in the .text section.
+
+------------------------------------------------------------------------------
+6.7. New linker command file operator, palign 
+------------------------------------------------------------------------------
+
+The linker will now support the use of a "palign" operator in the 
+linker command file. This operator can be applied to any output
+section specified in the LCF. The palign operator works just like
+an align operator. It will cause the placement of its section to be
+aligned to a specified byte boundary. In addition, palign will ensure
+that the size of its section is a multiple of its placement alignment
+restrictions, padding the section size up to such a boundary, as needed.
+
+------------------------------------------------------------------------------
+6.8. Generate XML link information file
+------------------------------------------------------------------------------
+
+The linker supports a new option to generate an XML link information file
+using the --xml_link_info <file> option.
+
+------------------------------------------------------------------------------
+6.9. Linker-generated Copy Tables
+------------------------------------------------------------------------------
+Extensions to the linker functionality support the following:
+
+  - easier to copying of objects from load-space to run-space at boot-time,
+
+  - easier management of memory overlays at run-time, and
+
+  - splitting of GROUPs and output sections that have separate load and
+        run addresses.
+
+User documentation for this feature is included in Annex A002 at the end
+of this chapter of the Release Notes.
+
+*******************************************************************************
+7. Compatibility issues in 4.1.x
+*******************************************************************************
+
+------------------------------------------------------------------------------
+7.1.  Pre-defined VERSION macro changes                                       
+------------------------------------------------------------------------------
+
+The compiler predefined macro __TI_COMPILER_VERSION__ has been added to
+represent the current version of the compiler.  This new name replaces the
+previous macro named __COMPILER_VERSION__. The older name will continue
+to be accepted for compatibility.
+
+The assembler predefined macro __TI_ASSEMBLER_VERSION has been added to
+represent the current version of the assembler.  
+
+The integer value that these macros expand to has also changed to reflect the
+new version string nomenclature for TI compilers. The version strings have
+been modified from a A.BB format to a X.Y.Z format to better indicate
+upgrade (feature) releases from update (bug fix) releases.
+
+Previously, these macros expanded to a 3 digit integer that
+corresponded to the version number of the release.  A release version 3.11
+would have resulted in a __TI_COMPILER_VERSION__ string of 311.
+
+The new format will take the three digit release version X.Y.Z and generate an
+integer XXXYYYZZZ where each portion X, Y and Z is expanded to three digits and
+concatenated together.  For example, a release version 4.1.0 would result in a
+__TI_COMPILER_VERSION__ expansion to 4001000. (The leading zeros are dropped
+to prevent the interpretation of the number as octal).
+
+The expansion of __TI_ASSEMBLER_VERSION__ and __TI_COMPILER_VERSION__ will be
+identical.
+
+Existing constructs in your code where you compare to these macros will remain
+functional with this newer method, but you will need to use the newer number
+format for comparisons to this release version or future release versions.
+
+For example, assume a current version of 4.1.0. If your code has this
+statement in it:
+
+#if __TI_COMPILER_VERSION__ > 311
+
+to test for a compiler version more recent than 3.11, it will still work under
+the new number format since the __TI_COMPILER_VERSION__ macro will expand to
+4001000 which will be larger than 311.
+
+==============================================================================
+8. Known Issues in 4.1.x
+==============================================================================
+
+------------------------------------------------------------------------------
+K001. SDSsq11516
+------------------------------------------------------------------------------
+Summary  : Long types for bitfields are not supported although they're legal in
+           C++
+
+Long bitfield types are not supported in C++ programs on the C2000.
+
+
+------------------------------------------------------------------------------
+K002. SDSsq11669
+------------------------------------------------------------------------------
+Summary  : C++ allows enumerators larger than 'int' but C2000 Compiler does not
+
+C++ allows enumerators larger than an int.  Currently, the C2000 compiler 
+forces all enumerators to ints.
+
+
+------------------------------------------------------------------------------
+K003. SDSsq11721
+------------------------------------------------------------------------------
+Summary  : "Extern inline" functions are not supported in C2000 C/C++ Compiler
+
+"Extern inline" functions are not supported by the C2000 C/C++ compiler.
+The compiler/code generator does not create globally accessible
+code for functions which are declared inline. A simple example is:
+
+inline int x() { return 1; }
+int y() {return 2;}
+
+When compiled with cl2000 -k -c test.c a warning is produced:
+"test.c", line 1: warning: function "x" was declared but never
+referenced
+
+and the resulting assembler file (test.asm) does not contain any code
+for x(). 
+
+Workaround:
+-----------
+
+As a workaround that involves the least amount of code modification, I
+suggest that the user define a macro to be "static inline" and use that
+macro as the inline modifier for these functions.  In the normal case,
+these functions will be inlined.  To generate callable versions of these
+functions, also compile the header files containing the inlined
+functions with this new macro undefined. 
+
+For example: 
+
+---------------------------------------------------------------------- 
+header.h: 
+
+#ifdef NO_INLINE 
+#define STATIC_INLINE 
+#else 
+#define STATIC_INLINE static inline 
+#endif 
+
+/* Replace the inline modifier with STATIC_INLINE for all inlined */
+/* functions which you also want to generate a callable version.  */ 
+STATIC_INLINE int x() { return 1; } 
+
+---------------------------------------------------------------------- 
+foo.c: 
+
+/* Inline occurs normally in this file */ 
+#include "header.h" 
+
+int y() { return x(); } 
+
+---------------------------------------------------------------------- 
+body.c: 
+
+/* Compile this file to generate callable versions of all inline */
+/* functions which use the STATIC_INLINE macro.                  */ 
+#define NO_INLINE 
+#include "header.h" 
+
+
+------------------------------------------------------------------------------
+K004. SDSsq19038
+------------------------------------------------------------------------------
+Summary  : Global variables are not visible in watch window if using the -h
+           option
+
+If the user selects the option "Make Global Symbols Static (-h)" under 
+the Linker tab in tbe Build Options window, they will not be able to 
+monitor global variables in the watch window while running that program.
+
+If the user attempts to watch a global variable, the watch window will 
+display "Identifier not found."
+
+This problem did not exist in CCS 1.20.
+
+Workaround:
+-----------
+
+Resolve conflicting global variable names so -h is not required.
+
+
+------------------------------------------------------------------------------
+K005. SDSsq32879
+------------------------------------------------------------------------------
+Summary  : STABS variables declared in loop bodies are promoted to function
+           scope
+
+When building the following program with STABS debug, you will notice 
+that the variable "j", which is declared in the for loop, appears in 
+_main's function scope (not the loop scope) when you look at the symbol 
+table:
+
+Program:
+
+#include <stdio.h>
+
+int main()
+{
+   int i;
+
+   for (i = 0; i < 10; i++)
+   {
+      int j;
+
+      j = i * 2;
+      printf("%d\n", j);
+   }
+   return 0;
+}
+
+
+Symbol Table:
+
+ <1> "_main" :
+      Defined in section ".text", Type = 0x24, Class = C_EXT
+      Has 1 aux entries, its value is 0x0.
+
+      Function size     : 116
+      Line number ptr   : 0x196
+      Next symbol index : 18 (SL1)
+
+ <3> ".bf" :
+      Defined in section ".text", Type = 0x0, Class = C_FCN
+      Has 1 aux entries, its value is 0x0.
+
+      Line number       : 3
+      Next symbol index : 18 (SL1)
+      # line entries    : 7
+      Register save mask: 00080000
+      Frame size        : 24
+
+ <5> "_i" :
+      ABSOLUTE SYMBOL, Type = 0x4, Class = C_AUTO
+      Has 1 aux entries, its value is 0xc.
+
+      Symbol size : 32
+
+ <7> "_j" :
+      ABSOLUTE SYMBOL, Type = 0x4, Class = C_AUTO
+      Has 1 aux entries, its value is 0x10.
+
+      Symbol size : 32
+
+ <9> ".bb" :
+      Defined in section ".text", Type = 0x0, Class = C_BLOCK
+      Has 1 aux entries, its value is 0x1c.
+
+      Line number       : 6
+      Next symbol index : 14 (RL0)
+
+ <11> "L1" :
+      Defined in section ".text", Type = 0x4, Class = C_LABEL
+      Has 0 aux entries, its value is 0x1c.
+
+ <12> ".eb" :
+      Defined in section ".text", Type = 0x0, Class = C_BLOCK
+      Has 1 aux entries, its value is 0x44.
+
+      Line number       : 11
+
+Note:  to be correct, the "_j" symbol should appear between the ".bb" 
+and the ".eb" symbol.
+
+
+Workaround:
+-----------
+
+Use DWARF debug.
+
+
+
+------------------------------------------------------------------------------
+K006. SDSsq33090
+------------------------------------------------------------------------------
+Summary  : DWARF does not correctly represent variables stored in register
+           pairs
+
+In the attached example, variables "var1" and "var2" are both long long 
+types, and are stored in A7:A6 and B5:B4.  However, the DWARF 
+information shows var1 only to be in A6, and var2 only to be in B4:
+
+      [000000e8] DW_TAG_variable
+       DW_AT_name       var1
+       DW_AT_symbol_name       _var1
+       DW_AT_type       [00000113]
+       DW_AT_location        { DW_OP_reg6 }
+
+      [000000fa] DW_TAG_variable
+       DW_AT_name       var2
+       DW_AT_symbol_name       _var2
+       DW_AT_type       [00000113]
+       DW_AT_location        { DW_OP_reg20 }
+
+
+To correctly represent these variables, the DW_AT_location attributes 
+need to be expressions evaluate to "A5 shifted left 32 bits, then added 
+to A4" (for var1).  The correct DWARF information would then look 
+something like this:
+
+      [000000e8] DW_TAG_variable
+       DW_AT_name       var1
+       DW_AT_symbol_name       _var1
+       DW_AT_type       [00000113]
+       DW_AT_location        { DW_OP_plus DW_OP_shl DW_OP_const1u 0x20 
+DW_OP_reg7 DW_OP_reg6 }
+
+      [000000fa] DW_TAG_variable
+       DW_AT_name       var2
+       DW_AT_symbol_name       _var2
+       DW_AT_type       [00000113]
+       DW_AT_location        { DW_OP_plus DW_OP_shl DW_OP_const1u 0x20 
+DW_OP_reg21 DW_OP_reg20 }
+
+
+Workaround:
+-----------
+
+Although "var1" and "var2" are shown to be in single registers, a 
+debugger could determine that they are actually stored in register 
+pairs by looking at the type of the variables:
+
+   [00000113] DW_TAG_base_type
+    DW_AT_name    long long
+    DW_AT_encoding    0x5
+    DW_AT_byte_size    0x8
+
+The base type indicates that the size of the variables is 0x8 bytes.  
+Since a single register can only store 0x4 bytes of information, it 
+would take two registers to hold this values.
+
+On TI architectures, values stored in multiple registers are always 
+stored in consecutive registers.  Thus, the debugger would know that if 
+the entire value could not fit in A4, the rest of the value must be in 
+A5.  A5 would contain the upper 32 bits of the value.
+
+
+
+------------------------------------------------------------------------------
+K007. SDSsq33594
+------------------------------------------------------------------------------
+Summary  : Fail accessing files specified as PC UNC paths
+           (\\server\directory\file)
+
+The compiler cannot properly access files specified with Windows UNC
+paths, such as \\server\directory\file.c
+
+The compiler will improperly handle the leading slashes, and the
+filename will become \server\directory\file.c and an error will result.
+
+There are two workarounds:
+
+1 - Mount the path as a local drive on the PC and access it through 
+    that mount point.
+2 - Double all slashes, making the file name become
+    \\\\server\\directory\\file.c
+
+Workaround:
+-----------
+
+Map the network drive to a letter and use that to access it, or double
+up each backslash, i.e.
+
+\\server\directory
+
+becomes
+
+\\\\server\\directory
+
+
+------------------------------------------------------------------------------
+K008. SDSsq34243
+------------------------------------------------------------------------------
+Summary  : pow(2,x) has fairly significant rounding error
+
+For pow(2,x) where x has an odd factor >=13, C28x RTS give results
+that are not exact, and in fact are wrong by several decimal places. 
+
+
+------------------------------------------------------------------------------
+K009. SDSsq35081
+------------------------------------------------------------------------------
+Summary  : When using long filenames, ar2000 may not correctly add file to
+           library
+
+If a file with a long file name is added to an archive library using 
+the command "ar2000 r", it is possible that the file will replace a file 
+which already exists in the archive.
+
+Workaround:
+-----------
+
+Add new files using the ar2000 a command instead of using the r command:
+
+ar2000 a library.lib this_is_a_really_long_filename.obj
+
+instead of
+
+ar2000 r library.lib this_is_a_really_long_filename.obj
+
+
+------------------------------------------------------------------------------
+K010. SDSsq39228
+------------------------------------------------------------------------------
+Summary  : assembler expression ~(0x80000000) evaluates as 0x80000000
+
+The assembler may generate unexpected results when evaluating constant 
+expressions with large hex constants with the MS bit set.  For example:
+
+        .sslist
+
+        .eval   ~(0xc000000), mask2
+x       .macro
+        .mmsg   ":mask2:"
+        .endm
+
+        x
+
+The mask printed by this message is 0x8000000 when it is expected to 
+be 0x4fffffff.
+
+
+------------------------------------------------------------------------------
+K011. SDSsq39254
+------------------------------------------------------------------------------
+Summary  : Linker -xml_link_info option doesn't work when in a command file
+
+When using --xml_link_info option inside a linker command file,
+use the following syntax ...
+
+   --xml_link_info <xml filename>
+
+Note the use of a space between the option and the filename,
+rather than the '=' shown in documentation.
+
+
+------------------------------------------------------------------------------
+K012. SDSsq39619
+------------------------------------------------------------------------------
+Summary  : Float literal conversion to integers incorrectly saturates at 32
+           bits
+
+When a floating point constant with a value of larger than pow(2,32) is
+converted (explicitly or implicitly) to a target integer type wider than
+32 bits, the compiler will incorrectly saturate the value to 32 bits.
+Values larger than (pow(2,32)-1) will be saturated incorrectly when
+converting to a wide unsigned type, and values outside the range
+(-pow(2,31))..(pow(2,31)-1) will be saturated incorrectly when
+converting to a wide signed type.
+
+Workaround:
+-----------
+
+Use float expressions rather than float constants when they occur as the
+argument to an explicit or implicit conversion.  A simple way to do this
+is with a function:
+
+float make_float(float x) { return x; }
+
+void fn() { long long y = make_float(5e11); [..] }
+
+------------------------------------------------------------------------------
+K013. SDSsq40598
+------------------------------------------------------------------------------
+Summary  : Compiler cannot handle odd file names at link stage
+
+The linker does not always handle filenames with unusual characters such 
+as '+' when specified in a linker command file, and sometimes when
+specified on the compiler command line.  
+
+In a linker command file, the filename merely needs to be quoted, as do
+all unusual options or names.  A bug exists when specified on the
+command line as a filename to the compiler.
+
+Workaround:
+-----------
+For non-c++, non-program mode code, invoke the linker separately. 
+No workaround for C++.
+
+------------------------------------------------------------------------------
+K014. SDSsq40842
+------------------------------------------------------------------------------
+Summary  : Ill-defined constant symbol causes pass conflict internal error
+Exists in: 4.1.2
+
+Defining a symbol, x, with a .set directive whose value contains a 
+forward reference to another symbol, y, can cause an internal error
+if x is used as a constant operand to a constant store instruction. 
+
+Workaround:
+-----------
+
+Define a constant symbol before it is referenced in the source file.
+
+
+------------------------------------------------------------------------------
+K015. SDSsq41616
+------------------------------------------------------------------------------
+Summary  : DWARF problem: static variables not placed in the right lexical
+           block
+Exists in: 4.1.2
+
+Static variables declared within a function always appear in DWARF in 
+the main scope of the function, even if they were declared in a nested 
+scope within the function.
+
+That is, for function:
+
+int foo()
+{
+   for (...)
+   {
+      static int x;
+   }
+}
+
+The DWARF information would indicate that the function looks like this:
+
+int foo()
+{
+   static int x;
+
+   for (...)
+   {
+   }
+}
+
+------------------------------------------------------------------------------
+K016. SDSsq43189
+------------------------------------------------------------------------------
+Summary  : Static data members missing DW_AT_specification attribute in DWARF
+Exists in: 4.1.2
+
+The defining DIEs for static data members do not have a 
+DW_AT_specification attribute to tie them back to their CSU 
+declaration.
+
+Workaround:
+-----------
+
+There are two workarounds for this issue:
+
+1)       The DW_AT_symbol_name attribute can be used to find the 
+declaration in its class declaration.
+2)       The DW_AT_name of the global DIE is the fully-qualified 
+name.  This allows you to display the fully qualified name without 
+using #1 to find the actual declaration.
+
+
+------------------------------------------------------------------------------
+K017. SDSsq43823
+------------------------------------------------------------------------------
+Summary  : Linker hangs when trying to create a relocatable output module
+Exists in: 4.1.2
+
+Linking with the -r (produce relocatable output module) option can 
+cause the linker to hang if the source files were compiled with debug 
+(-g) enabled.
+
+cl2000 -v28 -ml -g file1.c file2.c
+cl2000 -z -r -o linked.obj file1.obj file2.obj
+cl2000 -z -r -o linked2.obj linked.obj <-- linker hangs here
+
+
+Workaround:
+-----------
+
+On the second linker invocation, include the -b (disable merging of 
+symbolic debug information) linker option
+
+cl2000 -z -b -r -o linked2.obj linked.obj
+
+------------------------------------------------------------------------------
+K018. SDSsq44745
+------------------------------------------------------------------------------
+Summary  : Malloc(-4) instruction should return NULL ptr instead of some
+           address
+Exists in: 4.1.2
+
+The size field of a malloc is an unsigned int. 
+If -4 is passed, it gets converted to an unsigned value and therefore 
+we are not seeing a null pointer.
+
+Workaround:
+-----------
+
+Put in a check in the user program such as:
+
+if (size > 0)
+  do the malloc
+else
+  just set pointer to NULL
+
+
+==============================================================================
+A. Annex       
+==============================================================================
+
+================================================================================
+A001. Sharing C Header Files With Assembly Source
+================================================================================
+
+Contents
+
+1. Overview
+2. .cdecls Syntax
+3. Notes on C/C++ Conversions
+      3.1  Comments
+      3.2  Conditional Compilation (#if/#else/#ifdef/etc.)
+      3.3  Pragmas
+      3.4  #error/#warning Directives
+      3.5  Predefined symbol __ASM_HEADER__
+      3.6  Usage within C/C++ asm() statements
+      3.7  #include directives
+      3.8  #define Macro Conversion
+      3.9  #undef
+      3.10 Enumerations
+      3.11 C Strings
+      3.12 sizeof(), offsetof(), etc.
+      3.13 Structures and Unions
+      3.14 Function/Variable Prototypes
+      3.15 Prepending "_" to function/variable names
+      3.16 Basic C/C++ Types
+4. Notes on C++ Specific Conversions
+      4.1 Name Mangling
+      4.2 Derived Classes
+      4.3 Templates
+      4.4 Virtual Functions
+5. New Assembler Support
+      5.1 Enumerations (.enum/.emember/.endenum)
+      5.2 .define
+      5.3 .undef/.unasg
+      5.4 $defined()
+      5.5 $sizeof()
+      5.6 Structure/Union Alignment & $alignof()
+      5.7 .cstring
+
+==============================================================================
+1. Overview
+==============================================================================
+
+The .cdecls directive allows programmers in mixed assembly and C/C++
+environments to share C headers containing declarations and prototypes between
+the C and assembly code.  Any legal C/C++ can be used in a .cdecls block and the
+C/C++ declarations will cause suitable assembly to be generated automatically,
+allowing the programmer to reference the C/C++ constructs in assembly code --
+calling functions, allocating space, and accessing structure members -- using
+the equivalent assembly mechanisms.  While function and variable DEFINITIONS are
+ignored, most common C/C++ elements are converted to assembly: enumerations,
+(non function-like) macros, function and variable prototypes, structures, and
+unions.
+
+     Example:
+     ------------------------------------------------------------
+                                                       myheader.h
+
+        #define WANT_ID 1
+        #define NAME "John\n"
+
+        extern int a_variable;
+        extern float cvt_integer(int src);
+
+        struct myCstruct { int member_a; float member_b; };
+
+        enum status_enum { OK = 1, FAILED = 256, RUNNING = 0 };
+  
+     ------------------------------------------------------------
+                                                        myasm.asm
+              .cdecls C,LIST,"myheader.h"
+
+     size:    .int $sizeof(myCstruct)
+     aoffset: .int myCstruct.member_a 
+     boffset: .int myCstruct.member_b 
+
+     okvalue: .int status_enum.OK
+     failval: .int status_enum.FAILED
+
+              .if $defined(WANT_ID)
+     id       .cstring NAME
+              .endif
+
+     ------------------------------------------------------------
+
+==============================================================================
+2. .cdecls Syntax
+==============================================================================
+
+Single Line Syntax:
+
+	.cdecls <OPTIONAL PARAMETERS>, "filename" [, "additional filenames"]
+
+Multiple Line Syntax:
+
+        .cdecls <OPTIONAL PARAMETERS>
+        %{
+            /*-------------------------------------------*/
+            /* C/C++ code - Typically a list of          */
+            /* #include's and a few defines.             */
+            /*-------------------------------------------*/
+        %}
+
+The directive is .cdecls.  In the single line format, the options (see
+below) are followed by one or more filenames to include.  The
+filenames and parameters are separated by commas.  Each file listed
+will act as if '#include "filename"' was specified in the multiple
+line format.  In the multiple line format, the line following the
+directive must contain the opening .cdecls block indicator -- "%{" --
+as shown above.  Everything after the "%{", up to the closing block
+indicator -- "%}" -- will be treated as C/C++ source and processed.
+Ordinary assembler processing then resumes on the line following the
+closing %}.
+
+Note that because .cdecls is an assembler directive, it cannot begin
+in column 0.
+
+The directive's parameters control what language the code is treated
+as and how to present the .cdecls block and the converted code to the
+user.  The possible parameters are as follows, and may appear in any
+order:
+
+   /-------------------------------------------------------------------------\
+   | Parameter   Meaning                                                     |
+   | ---------   -------                                                     |
+   | C           Treat the code in the .cdecls block as C source code.       |
+   |             (DEFAULT)                                                   |
+   |                                                                         |
+   | CPP         Treat the code in the .cdecls block as C++ source code.     |
+   |             This is the opposite of the "C" parameter.                  |
+   |                                                                         |
+   | NOLIST      Do NOT include the converted assembly code in any listing   |
+   |             file generated for the containing assembly file.            |
+   |             (DEFAULT)                                                   |
+   |                                                                         |
+   | LIST        DO include the converted assembly code in any listing       |
+   |             file generated for the containing assembly file.            |
+   |             This is the opposite of the "NOLIST" parameter.             |
+   |                                                                         |
+   | NOWARN      Do NOT emit warnings on STDERR about unconvertable          |
+   |             C/C++ constructs while parsing the .cdecls source block.    |
+   |             (DEFAULT)                                                   |
+   |                                                                         |
+   | WARN        DO generate warnings on STDERR about unconvertable          |
+   |             C/C++ constructs while parsing the .cdecls source block.    |
+   |             This is the opposite of the "NOWARN" parameter.             |
+   |                                                                         |
+   \-------------------------------------------------------------------------/
+
+The text within "%{ ... %}" is passed to the C/C++ compiler to convert
+it to assembly language.  Much of C language syntax, including
+function and variable definitions as well as function-like macros, is
+NOT supported and will be ignored during the conversion.  However, all
+of what traditionally appears in C header files is supported,
+including function/variable prototypes, structure/union declarations,
+NON-FUNCTION-LIKE macros, enumerations, and #define's.  The resulting
+assembly language is included in the assembly file at the point of the
+.cdecls directive as if it were written there by the programmer.  If
+the LIST parameters is used, the listing file will reflect this
+converted assembly as it would for any file that was .include'd or
+.copy'd.
+
+Because the resulting assembly is treated as an .include'd file, use
+of .cdecls within .include'd or .copy'd files is subject to the same
+nesting limits as those directives.
+
+The .cdecls directive may appear anywhere in an assembly source file,
+and may occur multiple times within a file.  NOTE, however, that the
+C/C++ environment created by one .cdecls is NOT inherited by a later
+.cdecls; the C/C++ environment begins again anew for each .cdecls.
+
+Example:
+
+The following code:
+
+        .cdecls C,NOLIST
+        %{
+            #define ASMTEST 1
+        %}
+
+        .cdecls C,NOLIST
+        %{
+            #ifndef ASMTEST
+                #warn "ASMTEST not defined!"   /* will be issued */
+            #endif
+        %}
+
+...will cause the warning to be issued!  Therefore, a typical use of
+the .cdecls block is expected to be a single usage near the beginning
+of the assembly source file, in which all necessary C/C++ header files
+will be included.  
+
+Use the compiler shell's -I<path> include path options to specify
+additional include file paths needed for the header files used
+in assembly, as you would when compiling C files.
+
+Any C/C++ errors or warnings generated by the code of the .cdecls will
+be emitted as they normally would for the C/C++ source code.  C/C++
+errors will cause the directive to fail, and any resulting converted
+assembly will not be included.
+
+C/C++ constructs that cannot be converted, such as function-like
+macros or variable definitions, will cause a comment to be output to
+the converted assembly file.  For example:
+
+        ; ASM HEADER WARNING - variable definition 'ABCD' ignored
+
+The prefix "ASM HEADER WARNING" will appear the beginning of each such
+message.  Note that to see the warnings, either the WARN parameter
+needs to be specified so the messages are displayed on STDERR, or else
+the LIST parameter needs to be specified so the warnings appear in the
+listing file, if any.
+
+Finally, note that the converted assembly code will not appear in the
+same order as the original C/C++ source code and C/C++ constructs
+may be simplified to a normalized form during the conversion process,
+but this should not affect their final usage.
+
+==============================================================================
+3. Notes on C/C++ Conversions
+==============================================================================
+
+3.1 Comments
+--------------
+Comments are consumed entirely at the C level, and do not appear in the
+resulting converted assembly file.
+
+
+3.2 Conditional Compilation (#if/#else/#ifdef/etc.)
+----------------------------------------------------- 
+Conditional compilation is handled entirely at the C level during the
+conversion step.  Define any necessary macros either on the
+command line (using the shell "-DNAME=value" option) or within a
+.cdecls block using #define.  The #if/#ifdef/etc. C/C++ directives are
+NOT converted to assembly .if/.else/etc. directives.
+
+
+3.3 Pragmas
+-------------
+Pragmas found in the C/C++ source code will cause a warning to be
+generated (also see the WARN/NOWARN parameter discussion for where
+these warnings are created) as they are not converted.  They have no
+other effect on the resulting assembly file.
+
+
+3.4 #error/#warning Directives
+--------------------------------
+These preprocessor directives are handled completely by the compiler
+during the parsing step of conversion.  If one of these directives is
+encountered, the appropriate error or warning message is emitted.
+These directives are not converted to .emsg or .wmsg in the assembly
+output.
+
+
+3.5 Predefined symbol __ASM_HEADER__
+--------------------------------------
+The C/C++ macro __ASM_HEADER__ will be defined in the compiler while
+processing code within .cdecls.  This is to allow programmers to make
+changes in their code, such as not compiling definitions, during the
+.cdecls processing.
+
+Note that the programmer must be very careful not to use this macro to
+introduce any changes in the code that could result in inconsistencies
+between the code processed while compiling the C/C++ source and while
+converting to assembly!
+
+
+3.6 Usage within C/C++ asm() statements
+-----------------------------------------
+The .cdecls directive is not allowed within C/C++ asm() statements
+and will cause an error to be generated.
+
+
+3.7 #include directives
+-------------------------
+The C/C++ preprocessor directive #include is handled transparently by
+the compiler during the conversion step.  Such #includes can be nested
+as deeply as desired as in C/C++ source.  The assembly directives
+.include and .copy are not used or needed within a .cdecls. Use
+the command line -I<path> option to specify additional paths
+to be searched for included files, as you would for C compilation.
+
+
+3.8 #define Macro Conversion
+------------------------------
+ONLY OBJECT-LIKE MACROS ARE CONVERTED TO ASSEMBLY.  Function-like
+macros have no assembly representation and so cannot be converted.
+Pre-defined and built in C/C++ macros are not converted to assembly
+(i.e. __FILE__, __TIME__, __TI_COMPILER_VERSION__, etc.)
+
+     Example:
+     ---------------------------------------------------------------
+        // the following is converted to assembly because it is
+        // an object-like macro
+        #define NAME Charley
+
+        // the following function-like macro is not converted
+        #define MAX(x,y) (x>y ? x : y)
+     ---------------------------------------------------------------
+
+Some macros, while they are converted, have no functional use in
+the containing assembly file.  For example:
+
+        #define FOREVER while(1)
+
+results in the assembly substitution symbol FOREVER being set to the
+value "while(1)", although this has no useful use in assembly because
+"while(1)" is not legal assembly code.
+
+Also note that macro values are NOT interpreted as they are
+converted.  For example:
+
+        #define OFFSET  5+12
+
+will result in the assembler substitution symbol OFFSET being set to
+the LITERAL string value "5+12" and NOT the value 17!  This happens
+because the semantics of the C/C++ language require that macros are
+evaluated in context and not when they are parsed.
+
+A note about string macros: because macros in C/C++ are evaluated in
+their usage context, C/C++ printf escape sequence such as \n are not
+converted to a single character in the converted assembly macro.  See
+section 3.11 for suggestions on how to use C/C++ macro strings.
+
+Macros are converted using the new .define directive (see section
+5.2), which functions similar the existing .asg directive, except that
+it disallows redefinitions of register symbols and mnemonics to
+prevent the conversion from corrupting the basic assembly environment.
+To remove a macro from the assembly scope, .undef can be used
+following the .cdecls that defines it (see section 5.3).
+
+Note that the macro functionality of # (stringize operator) is only
+useful within functional macros, which are not supported by this
+process, so # is not supported either.  ## (concatenation operator) is
+really only useful in a functional context, but can be used
+degenerately to concatenate two strings and so it is supported in that
+context.
+
+
+3.9 #undef
+------------
+Symbols #undef'ined before the end of the .cdecls will not be
+converted to assembly.
+
+
+3.10 Enumerations
+-------------------
+Enumeration members are converted to .enum elements in assembly. For
+example:
+
+   enum state { ACTIVE=0x10, SLEEPING=0x01, INTERRUPT=0x100, POWEROFF, LAST};
+
+is converted to the following assembly code:
+
+   state      .enum
+   ACTIVE     .emember 16
+   SLEEPING   .emember 1
+   INTERRUPT  .emember 256
+   POWEROFF   .emember 257
+   LAST       .emember 258
+              .endenum
+
+and then are used via the pseudo-scoping created by the .enum directive:
+
+   AC0 = #(state.ACTIVE)
+
+The usage is similar to that for accessing structure members,
+"enum_name.member".  
+
+This pseudo-scoping is used to prevent enumeration member names from
+corrupting other symbols within the assembly environment.
+
+
+3.11 C Strings
+--------------
+Because C string escapes such as '\n' and '\t' are not converted to
+hex characters 0x0A and 0x09 until their use in a string constant in a
+C/C++ program, C macros whose values are strings may not be
+represented as expected in assembly substitution symbols.  For
+example:
+
+        #define MSG "\tHI\n"
+
+becomes, in assembly:
+
+        .define """\tHI\n""",MSG  ; 6 quoted characters! not 5!
+
+When used in a C string context, the programmer expects this to be
+converted to 5 characters (tab, H, I, newline, NULL), but the
+assembler's .string directive does not know how to perform the C
+escape conversions.
+
+The new .cstring directive can be used by the programmer to cause the
+escape sequences and NULL termination to be properly handled as they
+would in C/C++.  Using the above symbol MSG with a .cstring directive
+results in 5 characters of memory being allocated, the same characters
+as would result if used in a C/C++ strong context.  (See section 5.7
+for additional info about the .cstring directive.)
+
+
+3.12 sizeof(), offsetof(), etc.
+---------------------------------
+The C/C++ builtin functions, such as sizeof(), will not get translated
+to their assembly counterparts, if any, if they are used in macros, and
+also will not have their C expression values inserted into the resulting
+assembly macro because macros are evaluated in context and there
+is no active context when converting the macros to assembly.
+
+Suitable functions such as $sizeof() are available in assembly
+expressions, although since the basic types such as int/char/float
+have no "type" representation in assembly, there is no way to ask for
+$sizeof(int), for example, in assembly.
+
+
+3.13 Structures and Unions
+----------------------------
+C/C++ structures and unions are converted to assembly .struct and
+.union elements.  Padding and ending alignment are added as necessary
+to make the resulting assembly structure have the same size and member
+offsets as the C/C++ source.  The primary purpose is to allow
+accessing members of C/C++ structures, as well as to facilitate
+debugging of the assembly code.  For nested structures, the assembly
+.tag feature is used to refer to other structures/unions.  The
+alignment is also passed from the C/C++ source so that the assembly
+symbol is marked with the same alignment as the C/C++ symbol.  (See
+section 3.3 for information about pragmas, which may attempt to modify
+structures.)  Because the alignment of structures is stored in the
+assembly symbol, builtin assembly functions like $sizeof() and
+$alignof() can be used on the resulting structure name symbol.
+
+Note when using unnamed structures (or unions) in typedefs -- for
+example 
+
+        typedef struct { int a_member; } mystrname;
+
+that this is really a shorthand way of writing:
+
+        struct <temporary name> { int a_member; };
+        typedef <temporary name> mystrname;
+
+and that the conversion will process it in the same manner, generating
+a "temporary" name for the structure and then using .define to output
+a "typedef" from the temporary name to the user name.  You should use
+your "mystrname" in assembly the same as you would in C/C++, but do
+not be confused by the assembly structure definition in the list,
+which contains the temporary name.  If you want to avoid the temporary
+name, specify a name for the structure, as in 
+
+        typedef struct a_st_name { ... } mystrname;
+
+If a shorthand method is used in C to declare a variable with a
+particular structure, for example
+
+        extern struct a_name { int a_member; } a_variable;
+
+then after the structure is converted to assembly, a .tag directive
+will be generated to declare the structure of the external variable,
+for example:
+
+        _a_variable .tag a_st_name
+
+This allows the assembly programmer to refer to _a_variable.a_member
+in their assembly code.
+
+
+3.14 Function/Variable Prototypes
+---------------------------------
+Non-static function and variable prototypes (not definitions) will
+result in a .global directive being generated for each symbol found.
+
+Also see section 3.15 for issued related to the format of the names and
+the "_" prefix, and section 4.1 for C++ name mangling issues.
+
+Function and variable definitions will result in a warning message
+being generated (also see the WARN/NOWARN parameter discussion for
+where these warnings are created) for each, and they will not be
+represented in the converted assembly.
+
+Note that the assembly symbol representing the variable declarations
+will not contain type information about those symbols.  Only a .global
+will be issued for them.  Therefore, it is the programmers
+responsibility to ensure the symbol is used appropriately.
+
+See the latter portion section 3.13 for information on variables names
+which are of a structure/union type.
+
+
+3.15 Prepending "_" to function/variable names
+-----------------------------------------------
+C/C++ variables and functions declared at global scope are written out
+with a prepended underscore "_", as is the current C/C++ convention
+used by the TI Compiler tools.  Be sure to prepend the "_" when
+calling these C/C++ functions from assembly.
+
+Other global scope C names, such as structure tags and macro names,
+will be written out in the assembly include file without the
+underscore.  Check the resulting listing (see the LIST/NOLIST
+parameters) when in doubt.
+
+
+3.16 Basic C/C++ Types
+-----------------------
+Only complex types (i.e. structures and unions) in the C/C++ source
+code are converted to assembly.  Basic types such as int, char, float,
+etc. are not converted or represented in assembly beyond any existing
+.int, .char, .float, etc. directives that previously existed in
+assembly.
+
+Typedefs of basic types are therefore also not represented in the
+converted assembly.
+
+
+==============================================================================
+4. Notes on C++ Specific Conversions
+==============================================================================
+
+4.1 Name Mangling
+-------------------
+Symbol names may be mangled in C++ source files. When mangling occurs,
+the converted assembly will use the mangled names to avoid symbol name
+clashes.  The user can use the demangler (demXX) to demangle names and
+identify the correct symbols to use in assembly.
+
+To defeat name mangling in C++ for symbols where polymorphism (calling
+a function of the same name with different kinds of arguments) is not
+required, use the following syntax:
+
+        extern "C" void somefunc(int arg);
+
+The above format is the short method for declaring a single
+function.  To use this method for multiple functions, you can also
+use the following syntax:
+
+        extern "C"
+        {
+           void somefunc(int arg);
+           int  anotherfunc(int arg);
+           ...
+        }
+
+
+4.2 Derived Classes
+-------------------
+
+Derived classes are only partially supported when converting to
+assembly because of issues related to C++ scoping which does not exist
+in assembly.  The greatest difference is that base class members do
+not automatically become full (top-level) members of the derived
+class.
+
+     Example:
+     ------------------------------------------------------------
+        class base
+        {
+            public:
+                int b1;
+        };
+
+        class derived : public base
+        {
+            public:
+                int d1;
+        }
+     ------------------------------------------------------------
+
+In C++ code, the class derived would contain both integers b1 and d1.
+In the converted assembly structure "derived", the members of the base
+class must be accessed using the name of the base class, such as
+derived.__b_base.b1 rather than the expected derived.b1
+
+Note that a non-virtual, non-empty base class will have __b_ prepended
+to it's named within the derived class to signify it is a base class
+name.  That is why the example above is derived.__b_base.b1 and
+not simply derived.base.b1!
+
+
+4.3 Templates
+-------------
+No support exists for templates.
+
+
+4.4 Virtual Functions
+---------------------
+No support exists for virtual functions, as they have no assembly
+representation.
+
+
+==============================================================================
+5. New Assembler Support
+==============================================================================
+
+5.1 Enumerations (.enum/.emember/.endenum)
+------------------------------------------
+New directives have been created to support a pseudo-scoping for enumerations.
+The format of these new directives is:
+
+ENUM_NAME       .enum
+MEMBER1         .emember [optional value, first member defaults to 0 as in C]
+MEMBER2         .emember [optional value, defaults to previous value + 1]
+...
+                .endenum
+
+The .enum directive begins the enumeration definition and .endenum
+terminates it.
+
+The format to use the value of a member is ENUM_NAME.MEMBER, similar
+to a structure member usage.
+
+The .emember directive optionally accepts the value to set the member
+to, just as in C/C++.  If not specified, the member will take a value
+one more than the previous member.  As in C/C++, member names cannot
+be duplicated, although values may be.  Unless specified with
+.emember, the first enumeration member will be given the value 0
+(zero), as in C/C++.
+
+The enumeration name (ENUM_NAME) cannot be used to allocate space; it's
+size is reported as zero.
+
+.endenum cannot be used with a label, as structure .endstruct
+directives can, as the .endenum directive has no value like the
+.endstruct does (containing the size of the structure).
+
+Conditional compilation directives (.if/.else/.elsif/.endif) are the
+only other non-enumeration code allowed within the .enum/.endenum
+sequence.
+
+
+5.2 .define
+-----------
+
+        .define <substitution string>,<substitution symbol name>
+
+The new .define directive functions the same as the existing .asg
+directive, except that it disallows creation of a substitution symbol
+that has the same name as a register symbol or mnemonic.  It does not
+create a new symbol name space in the assembler, rather it uses
+the existing substitution symbol name space.
+
+The directive is used to prevent corruption of the assembly
+environment when converting C/C++ headers.
+
+Also see section 5.3, which discusses the .undef/.unasg directive.
+
+
+5.3 .undef/.unasg
+-----------------
+
+        .undef <substitution symbol name>
+        .unasg <substitution symbol name>
+
+The .undef directive is used to remove the definition of a
+substitution symbol created using .define or .asg.  This directive
+will remove the named symbol from the substitution symbol table from
+the point of the .undef to the end of the assembly file.
+
+This can be used to remove from the assembly environment any C/C++
+macros that may cause a problem.
+
+Also see section 5.2, converting the .define directive.
+
+
+5.4 $defined()
+--------------
+
+        $defined(<substitution symbol name>)
+
+Returns true/1 or false/0 depending on whether the name exists in the
+current substitution symbol table or the standard symbol table.  In
+essence, returns TRUE if the assembler has any user symbol in scope by
+that name.  This differs from $isdefed in that $isdefed only tests for
+NON-substitution symbols.
+
+A statement such as ".if $defined(macroname)" is then similar to the C
+code "#ifdef macroname".
+
+See sections 5.2 and 5.3 for the use of .define and .undef in
+assembly.
+
+
+5.5 $sizeof()
+-------------
+
+        $sizeof(<structure name>)
+
+The new assembly builtin function $sizeof() can be used to query the
+size of a structure in assembly.  It is an alias for the already
+existing $structsz().
+
+This can then be used similarly to the C builtin function sizeof().
+
+Note that the assembler's $sizeof() builtin function cannot be used to
+ask for the size of basic C/C++ types, such as $sizeof(int), because
+those basic type names are not represented in assembly.  Only complex
+type are converted from C/C++ to assembly.
+
+Also see section 3.12 which notes that this conversion will not happen
+automatically if the C/C++ sizeof() builtin function is used within a
+macro.
+
+
+5.6 Structure/Union Alignment & $alignof()
+------------------------------------------
+The assembly .struct and .union directives now take an optional second
+argument which can be used to specify a minimum alignment to be
+applied to the symbol name.  This is used by the conversion process to
+pass the specific alignment from C/C++ to assembly.
+
+The assembly builtin function $alignof() can be used to report the
+alignment of these structures.  This can be used even on assembly
+structures, and the function will return the minimum alignment
+calculated by the assembler.
+
+
+5.7 .cstring
+------------
+
+        .cstring "String with C escapes.\nWill be NULL terminated.\012"
+
+See section 3.11 for more information on the new .cstring directive.
+
+
+================================================================================
+ A002. Linker-generated Copy Tables
+================================================================================
+The linker now supports extensions to the linker command file (LCF) syntax that
+will:
+
+  - make it easier for you to copy objects from load-space to run-space
+    at boot-time,
+
+  - make it easier for you to manage memory overlays at run-time, and
+
+  - allow you to split GROUPs and output sections that have separate
+    load and run addresses.
+
+
+A Current Boot-Loaded Application Development Process
+-----------------------------------------------------
+
+In some embedded applications, there is a need to copy or download code and/or
+data from one location to another at boot-time before the application actually
+begins its main execution thread.  For example, an application may have its code
+and/or data in FLASH memory and need to copy it into on-chip memory before the
+application begins execution.
+
+One way to develop an application like this is to create a copy table in
+assembly code which contains:
+
+  - the load location (load page id and address),
+  - the run location (run page id and address), and
+  - the size 
+  
+of each block of code or data that needs to be moved from FLASH into on-chip
+memory at boot-time.
+
+A process for developing such an application might look like this:
+
+  1) Build the application to produce a .map file which contains
+     the load and run addresses of each section that has a separate
+     load and run placement.
+
+  2) Edit the copy table (used by the boot loader) to correct the load
+     and run addresses as well as the sizess of each block of code or
+     data that needs to be moved at boot-time.
+
+  3) Build the application again, incorporating the updated copy table.
+
+  4) Run the application.
+
+This process puts a heavy burden on the application developer to maintain the
+copy table (by hand, no less).  Each time a piece of code or data is added or
+removed from the application, the process must be repeated in order to keep the
+contents of the copy table up to date.
+
+An Alternative Approach
+-----------------------
+
+A developer can avoid some of this maintenance burden by using the LOAD_START(),
+RUN_START(), and SIZE() operators that are already part of the LCF syntax
+supported by the linker.  For example, instead of having to build the
+application to generate a .map file, the linker command file can be annotated:
+
+  SECTIONS
+  {
+     .flashcode: { app_tasks.obj(.text) } 
+         load = FLASH, run = PMEM, 
+	 LOAD_START(_flash_code_ld_start),
+	 RUN_START(_flash_code_rn_start),
+	 SIZE(_flash_code_size)
+
+     ...
+  }
+
+The LOAD_START(), RUN_START(), and SIZE() operators will instruct the linker to
+create three symbols:
+
+  _flash_code_ld_start	--> load address of .flashcode section
+  _flash_code_rn_start	--> run address of .flashcode section
+  _flash_code_size	--> size of .flashcode section
+
+These symbols can then be referenced from the copy table.  The actual data in
+the copy table will then be updated automatically each time the application is
+linked.  This approach removes step 1 of the original process.
+
+While maintenance of the copy table is markedly reduced, the developer must
+still carry the burden of keeping the copy table contents in synch with the
+symbols that are defined in the linker command file.  Ideally, we'd like to have
+the linker generate the boot copy table automatically.  This would avoid having
+to build the application twice *and* free the developer from having to
+explicitly manage the contents of the boot copy table.
+
+An Overlay Management Example
+-----------------------------
+
+Consider an application which contains a memory overlay that must be managed at
+run-time.  The memory overlay is defined using a UNION in the linker command
+file as follows:
+
+  SECTIONS
+  {
+     ...
+
+     UNION
+     {
+        GROUP
+	{
+	   .task1: { task1.obj(.text) }
+	   .task2: { task2.obj(.text) }
+
+	} load = ROM, LOAD_START(_task12_load_start), SIZE(_task12_size)
+
+	GROUP
+	{
+	   .task3: { task3.obj(.text) }
+	   .task4: { task4.obj(.text) }
+
+	} load = ROM, LOAD_START(_task34_load_start), SIZE(_task_34_size)
+
+     } run = RAM, RUN_START(_task_run_start)
+
+     ...
+  }
+
+The application must manage the contents of the memory overlay at run-time.
+That is, whenever any services from .task1 or .task2 are needed, the application
+must first ensure that .task1 and .task2 are resident in the memory overlay.
+Similarly for .task3 and .task4.
+
+To effect a copy of .task1 and .task2 from ROM to RAM at run-time, the
+application must first gain access to the load address of the tasks
+(_task12_load_start), the run address (_task_run_start), and the size
+(_task12_size).  Then this information is used to perform the actual code copy.
+
+Generating Copy Tables Automatically with the Linker
+----------------------------------------------------
+
+The linker now supports extensions to the LCF syntax to:
+  
+  - provide the ability to identify any object components that may need
+    to be copied from load-space to run-space at some point during the
+    run of an application,
+
+  - instruct the linker to automatically generate a copy table that
+    contains (at least) the load page id, run page id, load address, 
+    run address, and size of the component that needs to be copied, and
+
+  - instruct the linker to generate a user-specified symbol that
+    provides the address of a linker generated copy table.
+    
+For example, the above overlay management example can now be written as follows:
+  
+  SECTIONS
+  {
+     ...
+
+     UNION
+     {
+        GROUP
+	{
+	   .task1: { task1.obj(.text) }
+	   .task2: { task2.obj(.text) }
+
+	} load = ROM, table(_task12_copy_table)
+
+	GROUP
+	{
+	   .task3: { task3.obj(.text) }
+	   .task4: { task4.obj(.text) }
+
+	} load = ROM, table(_task34_copy_table)
+     
+     } run = RAM
+
+     ...
+  }
+  
+Using the above SECTIONS directive in the linker command file, the linker will
+generate two copy tables, _task12_copy_table and _task34_copy_table.  Each copy
+table provides the load page id, run page id, load address, run address, and
+size of the GROUP that it is associated with.  This information is accessible
+from application source code using the linker generated symbols,
+_task12_copy_table and _task34_copy_table, which provide the addresses of the
+two copy tables, respectively.
+
+Using this method, the developer does not have to worry about creation or
+maintenance of a copy table.  The developer can reference the address of any
+copy table generated by the linker in C/C++ or assembly source code, passing
+that value to a general purpose copy routine which will prcess the copy table
+and effect the actual copy.
+
+table() Operator
+----------------
+
+The mechanism that instructs the linker to produce a copy table is the table()
+operator.  A table() operator can be applied to an output section, a GROUP, or a
+UNION member.  The copy table generated for a particular table() specification
+can be accessed via a user-specified symbol that is provided as an argument to
+the table() operator.  The linker will create a symbol with this name and assign
+the address of the copy table as the value of the symbol.  The copy table can
+then be accessed from the application using the linker generated symbol.
+  
+Each table() specification applied to members of a given UNION must contain a
+unique name.  If a table() oeprator is applied to a GROUP, then none of that
+GROUP's members may be marked with a table() specification.  The linker will
+detect violations of these rules and report them as warnings, ignoring each
+offending use of the table() specification (the linker will not generate a copy
+table for erroneous table() operator specifications).
+
+Boot-Time Copy Tables
+---------------------
+
+The linker supports a special copy table name, BINIT (or binit), that can be
+used to create a boot-time copy table.  For example, the linker command file for
+the boot-loaded application described earlier ...
+
+  SECTIONS
+  {
+     .flashcode: { app_tasks.obj(.text) } 
+         load = FLASH, run = PMEM, 
+	 LOAD_START(_flash_code_ld_start),
+	 RUN_START(_flash_code_rn_start),
+	 SIZE(_flash_code_size)
+
+     ...
+  }
+
+can be re-written as follows:
+
+  SECTIONS
+  {
+     .flashcode: { app_tasks.obj(.text) } 
+         load = FLASH, run = PMEM, 
+	 table(BINIT)
+     ...
+  }
+
+The linker will create a copy table that can be accessed via a special
+linker-generated symbol, ___binit__, which contains the list of all object
+components that need to be copied from their load location to their run location
+at boot-time.  If a linker command file does not contain any uses of
+table(BINIT), then the ___binit__ symbol will be given a value of -1 to indicate
+that a boot-time copy table does not exist for a particular application.
+
+The table(BINIT) specification can be applied to an output section, GROUP, or
+UNION member.  If used in the context of a UNION, only one member of the UNION
+can be designated with table(BINIT).  If applied to a GROUP, then none of that
+GROUP's members may be marked with table(BINIT).  The linker will detect
+violations of these rules and report them as warnings, ignoring each offending
+use of the table(BINIT) specification.
+
+Applying a table() Operator to Multiple Object Components and Applying 
+Multiple table() Operators to a Single Object Component
+-----------------------------------------------------------------------
+
+If you have several pieces of code that need to be managed together, then you
+can apply the same table() operator to several different object components.  In
+fact, if you want to manage a particular object component in multiple ways, you
+can apply more than one table() operator to it.  Consider the following linker
+command file excerpt:
+
+  SECTIONS
+  {
+     UNION
+     {
+        .first: { a1.obj(.text), b1.obj(.text), c1.obj(.text) }
+	       load = EMEM, run = PMEM, table(BINIT), table(_first_ctbl)
+
+        .second: { a2.obj(.text), b2.obj(.text) }
+	       load = EMEM, run = PMEM, table(_second_ctbl)
+     }
+
+     .extra: load = EMEM, run = PMEM, table(BINIT)
+
+     ...
+  }
+
+In this example, the output sections .first and .extra will get copied from
+external memory (EMEM) into program memory (PMEM) at boot-time while processing
+the BINIT copy table.  After the application has started executing its main
+thread, it can then manage the contents of the overlay using the two overlay
+copy tables, _first_ctbl and _second_ctbl.
+
+Copy Table Contents
+-------------------
+
+In order to use a copy table that is generated by the linker, you must be aware
+of the contents of the copy table.  This information is included in a new RTS
+header file, cpy_tbl.h, which contains a C source representation of the copy
+table data structure that is automatically generated by the linker.
+
+This is a listing of the TMS320C2000 version of cpy_tbl.h:
+
+/*****************************************************************************/
+/* cpy_tbl.h  v4.1.2                                                         */
+/* Copyright (c) 2003 Texas Instruments Incorporated                         */
+/*                                                                           */
+/* Specification of copy table data structures which can be automatically    */
+/* generated by the linker (using the table() operator in the LCF).          */
+/*****************************************************************************/
+
+/*****************************************************************************/
+/* Copy Record Data Structure                                                */
+/*****************************************************************************/
+typedef struct copy_record
+{
+   unsigned int		 src_pgid;
+   unsigned int		 dst_pgid;
+   unsigned long	 src_addr;
+   unsigned long	 dst_addr;
+   unsigned long	 size;
+} COPY_RECORD;
+
+/*****************************************************************************/
+/* Copy Table Data Structure                                                 */
+/*****************************************************************************/
+typedef struct copy_table 
+{
+   unsigned int		 rec_size;
+   unsigned int		 num_recs;
+   COPY_RECORD		 recs[1];
+} COPY_TABLE;
+
+/*****************************************************************************/
+/* Prototypes for near and far general purpose copy routines.                */
+/*****************************************************************************/
+extern void copy_in(COPY_TABLE *tp);
+extern void far_copy_in(far COPY_TABLE *tp);
+
+/*****************************************************************************/
+/* Prototypes for utilities used by copy_in() to move code/data between      */
+/* program and data memory (see cpy_utils.asm for source).                   */
+/*****************************************************************************/
+extern void ddcopy(unsigned long src, unsigned long dst, unsigned long size);
+extern void dpcopy(unsigned long src, unsigned long dst, unsigned long size);
+extern void pdcopy(unsigned long src, unsigned long dst, unsigned long size);
+extern void ppcopy(unsigned long src, unsigned long dst, unsigned long size);
+
+For each object component that is marked for a copy, the linker will create a
+COPY_RECORD object for it.  Each COPY_RECORD contains at least the following
+information:
+
+  - component's load page id
+  - component's run page id
+  - component's load address
+  - component's run address
+  - component's size
+
+A page id of 0 indicates program memory and a page id of 1 indicates data 
+memory in C2000. 
+
+The linker collects all COPY_RECORDs that are associated with the same copy
+table into a COPY_TABLE object.  The COPY_TABLE object will contain the size of
+a given COPY_RECORD, the number of COPY_RECORDs in the table, and the array of
+COPY_RECORDs in the table.  For example, in the BINIT example above, the .first
+and .extra output sections will each have their own COPY_RECORD entries in the
+BINIT copy table.  The BINIT copy table will then look something like this:
+  
+  COPY_TABLE __binit__ = { 12, 2,
+                           { <load page id and address of .first>,
+                             <run page id and address of .first>,
+			     <size of .first> },
+                           { <load page id and address of .extra>,
+                             <run page id and address of .extra>,
+			     <size of .extra> } };
+
+General Purpose Copy Routine
+----------------------------
+
+The cpy_tbl.h file listed above also contains a prototype for a general purpose
+copy routine, copy_in(), which is now provided as part of the runtime support
+library.  copy_in() takes a single argument, the address of a linker generated
+copy table.  The routine will then process the copy table data object and
+perform the copy of each object component specified in the copy table.
+  
+The copy_in() function definition is provided in a new RTS source file
+called cpy_tbl.c.  Here is a listing of the file:
+  
+/*****************************************************************************/
+/* cpy_tbl.c  v4.1.2                                                         */
+/* Copyright (c) 2003 Texas Instruments Incorporated                         */
+/*                                                                           */
+/* General purpose copy routine.  Given the address of a linker-generated    */
+/* COPY_TABLE data structure, effect the copy of all object components       */
+/* that are designated for copy via the corresponding LCF table() operator.  */
+/*****************************************************************************/
+#include <cpy_tbl.h>
+
+/*****************************************************************************/
+/* COPY_IN()                                                                 */
+/*****************************************************************************/
+void copy_in(COPY_TABLE *tp)
+{
+   unsigned int i;
+   for (i = 0; i < tp->num_recs; i++)
+   {
+      COPY_RECORD *crp = &tp->recs[i];
+      unsigned int cpy_type = 0;
+
+      if (crp->src_pgid) cpy_type += 2;
+      if (crp->dst_pgid) cpy_type += 1;
+
+      switch (cpy_type)
+      {
+         case 3: ddcopy(crp->src_addr, crp->dst_addr, crp->size); break;
+         case 2: dpcopy(crp->src_addr, crp->dst_addr, crp->size); break;
+         case 1: pdcopy(crp->src_addr, crp->dst_addr, crp->size); break;
+         case 0: ppcopy(crp->src_addr, crp->dst_addr, crp->size); break;
+      }
+   }            
+}
+
+As noted above, a page id of 0 indicates program memory and page id of 1 
+indicates data memory.  The general purpose copy routine utilizes special 
+copy routines to copy data between code/data memory.
+
+Linker Generated Copy Table Sections and Symbols
+------------------------------------------------
+
+The linker will create and allocate a separate input section for each copy table
+that it generates.  Each copy table symbol will be defined with the address
+value of the input section that contains the corresponding copy table.
+
+Each overlay copy table input section will get a unique linker generated name.
+For example, table(_first_ctbl) would place the copy table for the .first
+section into an input section called ".ovly:_first_ctbl".  The linker will
+create a single input section, .binit, to contain the entire boot-time copy
+table.
+  
+You can control the placement of the linker generated copy table sections using
+the input section names in the linker command file.  For example, in this linker
+command file ...
+  
+  SECTIONS
+  {
+     UNION
+     {
+        .first: { a1.obj(.text), b1.obj(.text), c1.obj(.text) }
+	       load = EMEM, run = PMEM, table(BINIT), table(_first_ctbl)
+
+        .second: { a2.obj(.text), b2.obj(.text) }
+	       load = EMEM, run = PMEM, table(_second_ctbl)
+     }
+
+     .extra: load = EMEM, run = PMEM, table(BINIT)
+
+     ...
+
+     .ovly: { } > BMEM
+     .binit: { } > BMEM
+  }
+  
+the boot-time copy table will get generated into a .binit input section, which
+is then collected into the .binit output section, which is then mapped to an
+address in the BMEM memory area.  The _first_ctbl will be generated into the
+.ovly:_first_ctbl input section and the _second_ctbl will be generated into the
+.ovly:_second_ctbl input section.  Since the base names of both of these input
+sections match the name of the .ovly output section, both of them will get
+collected into the .ovly output section, which is then mapped to an address in
+the BMEM memory area.
+
+If no explicit placement instructions are provided for the linker generated copy
+table sections, they will be allocated according to the linker's default
+placement algorithm.
+
+The linker does not allow other types of input sections to be combined with a
+copy table input section in the same output section.  The linker will also not
+allow a copy table section that was created from a partial link session to be
+used as input to a succeeding link session.
+ 
+Splitting Object Components and Overlay Management
+--------------------------------------------------
+
+In previous versions of the linker, splitting of sections that have separate
+load and run placement instructions was not permitted.  The reason for this
+restriction was because there was no effective mechanism for the developer to
+gain access to the load location or run location of each one of the pieces of
+the split object component.  Therefore, there was no effective way to write a
+copy routine that could move the split section from its load location to its run
+location.
+
+However, the linker does have access to both the load location and run location
+of every piece of a split object component.  Using the table() operator, you can
+tell the linker to generate this information into a copy table.  Each piece of
+the split object component will get its own COPY_RECORD entry in the copy table
+object.
+
+For example, consider an application which has 7 tasks.  Task 1 through 3 are
+overlaid with tasks 4 through 7 (using a UNION directive).  The load placement
+of all of the tasks is split among 4 different memory areas (LMEM1, LMEM2,
+LMEM3, and LMEM4).  The overlay is defined as part of memory area PMEM.  Each
+set of tasks must be moved into the overlay at run-time before any services from
+the set are used.
+  
+You can now use table() operators in combination with splitting operators, '>>',
+to create copy tables that have all the information needed to move either group
+of tasks into the memory overlay:
+  
+  SECTIONS
+  {
+     UNION
+     {
+	.task1to3: { *(.task1), *(.task2), *(.task3) } 
+		load >> LMEM1 | LMEM2 | LMEM4, table(_task13_ctbl)
+
+	GROUP
+	{
+	   .task4: { *(.task4) }
+	   .task5: { *(.task5) }
+	   .task6: { *(.task6) }
+	   .task7: { *(.task7) }
+
+	} load >> LMEM1 | LMEM3 | LMEM4, table(_task47_ctbl)
+
+     } run = PMEM
+
+     ...
+
+     .ovly:	> LMEM4
+
+  }
+
+You then might write the driver for such an application as follows:
+
+  #include <cpy_tbl.h>
+
+  extern COPY_TABLE task13_ctbl;
+  extern COPY_TABLE task47_ctbl;
+
+  extern void task1(void);
+  ...
+  extern void task7(void);
+
+  main()
+  {
+     ...
+     copy_in(&task13_ctbl);
+     task1();
+     task2();
+     task3();
+     ...
+
+     copy_in(&task47_ctbl);
+     task4();
+     task5();
+     task6();
+     task7();
+     ...
+  }
+  
+The contents of the .task1to3 will be split in its load space and contiguous in
+its run space.  The copy table, _task13_ctbl, that is generated by the linker
+will contain a separate COPY_RECORD for each piece of the split section,
+.task1to3.  When the address of _task13_ctbl is passed to copy_in(), each piece
+of .task1to3 is then copied from its load location into the run location.
+
+The contents of the GROUP containing tasks 4 through 7 are also split in its
+load space.  The linker performs the GROUP split by applying the split operator
+to each member of the GROUP in order.  The copy table for the GROUP will then
+contain a COPY_RECORD entry for every piece of every member of the GROUP.  These
+pieces will all be copied into the memory overlay when the _task47_ctbl is
+processed by copy_in().
+
+The split operator can now be applied to an output section, GROUP, or the load
+placement of a UNION or UNION member.  The linker will not permit a split
+operator to be applied to the run placement of a UNION or the run placement of a
+UNION member.  The linker will detect such violations, emit a warning, and
+ignore the offending split operator usage.
+
+

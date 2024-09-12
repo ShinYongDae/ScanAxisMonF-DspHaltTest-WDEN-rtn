@@ -1,0 +1,7 @@
+#  08-Jul-2002 ppm	This makefile is included by other makefiles to
+#			specify the architecture-specific build.
+#			Used in the DDK c2000/examples/xdais directory.
+
+CHIP=28l
+CHIPDIR=c2000
+

@@ -1,0 +1,645 @@
+
+// dsp281x_init.h   
+// By RealSYS   
+   
+
+#ifndef DSP281x_INIT_H
+#define DSP281x_INIT_H
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+//---------------------------------------------------------------------------   
+//---------------------------------------------------------------------------   
+// Example: KickDog:    
+//---------------------------------------------------------------------------   
+// This function resets the watchdog timer.   
+// Enable this function for using KickDog in the application    
+   
+void KickDog(void)   
+{   
+    EALLOW;   
+    SysCtrlRegs.WDKEY = 0x0055;   
+    SysCtrlRegs.WDKEY = 0x00AA;   
+    EDIS;   
+}   
+   
+//---------------------------------------------------------------------------   
+// Example: DisableDog:    
+//---------------------------------------------------------------------------   
+// This function disables the watchdog timer.   
+   
+void DisableDog(void)   
+{   
+    EALLOW;   
+    SysCtrlRegs.WDCR= 0x0068;   
+    EDIS;   
+}   
+   
+//---------------------------------------------------------------------------   
+// Example: InitPll:    
+//---------------------------------------------------------------------------   
+// This function initializes the PLLCR register.   
+   
+void InitPll(Uint16 val)   
+{   
+   volatile Uint16 iVol;      
+      
+   if (SysCtrlRegs.PLLCR.bit.DIV != val)   
+   {   
+      
+      EALLOW;   
+      SysCtrlRegs.PLLCR.bit.DIV = val;   
+      EDIS;   
+      
+   // Optional: Wait for PLL to lock.   
+   // During this time the CPU will switch to OSCCLK/2 until the PLL is    
+   // stable.  Once the PLL is stable the CPU will switch to the new PLL value.    
+   //   
+   // This switch time is 131072 CLKIN cycles as of Rev C silicon.     
+   //      
+   // Code is not required to sit and wait for the PLL to lock.      
+   // However, if the code does anything that is timing critical,    
+   // and requires the correct clock be locked, then it is best to    
+   // wait until this switching has completed.     
+      
+   // If this function is run from waitstated memory, then the loop count can   
+   // be reduced as long as the minimum switch time is still met.    
+   
+   // iVol is volatile so the compiler will not optimize this loop out   
+   //   
+   // The watchdog should be disabled before this loop, or fed within    
+   // the loop.      
+      
+      DisableDog();   
+      
+   // Wait lock cycles.     
+   // Note,  This loop is tuned to 0-waitstate RAM memory.  If this   
+   // function is run from wait-stated memory such as Flash or XINTF,   
+   // then the number of times through the loop can be reduced    
+   // accordingly.    
+      for(iVol= 0; iVol< ( (131072/2)/12 ); iVol++)   
+      {   
+      
+      }   
+   }   
+}   
+   
+//--------------------------------------------------------------------------   
+// Example: InitPeripheralClocks:    
+//---------------------------------------------------------------------------   
+// This function initializes the clocks to the peripheral modules.   
+// First the high and low clock prescalers are set   
+// Second the clocks are enabled to each peripheral.   
+// To reduce power, leave clocks to unused peripherals disabled   
+// Note: If a peripherals clock is not enabled then you cannot    
+// read or write to the registers for that peripheral    
+   
+void InitPeripheralClocks(void)   
+{   
+   EALLOW;   
+// HISPCP/LOSPCP prescale register settings, normally it will be set to default values   
+   SysCtrlRegs.HISPCP.all = 0x0001;   
+   SysCtrlRegs.LOSPCP.all = 0x0002;   
+       
+// Peripheral clock enables set for the selected peripherals.      
+   SysCtrlRegs.PCLKCR.bit.EVAENCLK=1;   
+   SysCtrlRegs.PCLKCR.bit.EVBENCLK=1;   
+   SysCtrlRegs.PCLKCR.bit.SCIAENCLK=1;   
+   SysCtrlRegs.PCLKCR.bit.SCIBENCLK=1;   
+   SysCtrlRegs.PCLKCR.bit.MCBSPENCLK=1;   
+   SysCtrlRegs.PCLKCR.bit.SPIENCLK=1;   
+   SysCtrlRegs.PCLKCR.bit.ECANENCLK=1;   
+   SysCtrlRegs.PCLKCR.bit.ADCENCLK=1;   
+   EDIS;   
+}   
+   
+void InitSysCtrl(void)   
+{   
+// On F2812/F2810 TMX samples prior to rev C this initialization was    
+// required.  For Rev C and after this is no longer required   
+/*  
+   EALLOW;  
+   DevEmuRegs.M0RAMDFT = 0x0300;  
+   DevEmuRegs.M1RAMDFT = 0x0300;  
+   DevEmuRegs.L0RAMDFT = 0x0300;  
+   DevEmuRegs.L1RAMDFT = 0x0300;  
+   DevEmuRegs.H0RAMDFT = 0x0300;  
+   EDIS;  
+*/      
+   // Disable the watchdog           
+   DisableDog();   
+      
+   // Initialize the PLLCR to 0xA   
+   InitPll(0xA);   
+   
+   // Initialize the peripheral clocks   
+   InitPeripheralClocks();   
+}   
+   
+// InitPieCtrl:    
+// This function initializes the PIE control registers to a known state.   
+void InitPieCtrl(void)   
+{   
+    // Disable Interrupts at the CPU level:   
+    DINT;   
+   
+    // Disable the PIE   
+    PieCtrlRegs.PIECRTL.bit.ENPIE = 0;   
+   
+    // Clear all PIEIER registers:   
+    PieCtrlRegs.PIEIER1.all = 0;   
+    PieCtrlRegs.PIEIER2.all = 0;   
+    PieCtrlRegs.PIEIER3.all = 0;       
+    PieCtrlRegs.PIEIER4.all = 0;   
+    PieCtrlRegs.PIEIER5.all = 0;   
+    PieCtrlRegs.PIEIER6.all = 0;   
+    PieCtrlRegs.PIEIER7.all = 0;   
+    PieCtrlRegs.PIEIER8.all = 0;   
+    PieCtrlRegs.PIEIER9.all = 0;   
+    PieCtrlRegs.PIEIER10.all = 0;   
+    PieCtrlRegs.PIEIER11.all = 0;   
+    PieCtrlRegs.PIEIER12.all = 0;   
+   
+    // Clear all PIEIFR registers:   
+    PieCtrlRegs.PIEIFR1.all = 0;   
+    PieCtrlRegs.PIEIFR2.all = 0;   
+   PieCtrlRegs.PIEIFR3.all = 0;       
+    PieCtrlRegs.PIEIFR4.all = 0;   
+    PieCtrlRegs.PIEIFR5.all = 0;   
+    PieCtrlRegs.PIEIFR6.all = 0;   
+    PieCtrlRegs.PIEIFR7.all = 0;   
+    PieCtrlRegs.PIEIFR8.all = 0;   
+    PieCtrlRegs.PIEIFR9.all = 0;   
+    PieCtrlRegs.PIEIFR10.all = 0;   
+    PieCtrlRegs.PIEIFR11.all = 0;   
+    PieCtrlRegs.PIEIFR12.all = 0;   
+   
+}      
+   
+//---------------------------------------------------------------------------   
+// EnableInterrupts:    
+//---------------------------------------------------------------------------   
+// This function enables the PIE module and CPU interrupts   
+//   
+void EnableInterrupts()   
+{   
+   
+    // Enable the PIE   
+    PieCtrlRegs.PIECRTL.bit.ENPIE = 1;   
+               
+    // Enables PIE to drive a pulse into the CPU    
+    PieCtrlRegs.PIEACK.all = 0xFFFF;     
+   
+    // Enable Interrupts at the CPU level    
+    EINT;   
+   
+}   
+   
+const struct PIE_VECT_TABLE PieVectTableInit = {   
+   
+      PIE_RESERVED,  // Reserved space   
+      PIE_RESERVED,      
+      PIE_RESERVED,      
+      PIE_RESERVED,      
+      PIE_RESERVED,      
+      PIE_RESERVED,      
+      PIE_RESERVED,      
+      PIE_RESERVED,      
+      PIE_RESERVED,      
+      PIE_RESERVED,      
+      PIE_RESERVED,      
+      PIE_RESERVED,      
+      PIE_RESERVED,      
+   
+   
+// Non-Peripheral Interrupts   
+      INT13_ISR,     // XINT13 or CPU-Timer 1   
+      INT14_ISR,     // CPU-Timer2   
+      DATALOG_ISR,   // Datalogging interrupt   
+      RTOSINT_ISR,   // RTOS interrupt   
+      EMUINT_ISR,    // Emulation interrupt   
+      NMI_ISR,       // Non-maskable interrupt   
+      ILLEGAL_ISR,   // Illegal operation TRAP   
+      USER1_ISR,     // User Defined trap 1   
+      USER2_ISR,     // User Defined trap 2   
+      USER3_ISR,     // User Defined trap 3   
+      USER4_ISR,     // User Defined trap 4   
+      USER5_ISR,     // User Defined trap 5   
+      USER6_ISR,     // User Defined trap 6   
+      USER7_ISR,     // User Defined trap 7   
+      USER8_ISR,     // User Defined trap 8   
+      USER9_ISR,     // User Defined trap 9   
+      USER10_ISR,    // User Defined trap 10   
+      USER11_ISR,    // User Defined trap 11   
+      USER12_ISR,     // User Defined trap 12   
+   
+// Group 1 PIE Vectors   
+      PDPINTA_ISR,   // EV-A   
+      PDPINTB_ISR,   // EV-B   
+      rsvd_ISR,   
+      XINT1_ISR,        
+      XINT2_ISR,   
+      ADCINT_ISR,    // ADC   
+      TINT0_ISR,     // Timer 0   
+      WAKEINT_ISR,   // WD   
+   
+// Group 2 PIE Vectors   
+      CMP1INT_ISR,   // EV-A   
+      CMP2INT_ISR,   // EV-A   
+      CMP3INT_ISR,   // EV-A   
+      T1PINT_ISR,    // EV-A   
+      T1CINT_ISR,    // EV-A   
+      T1UFINT_ISR,   // EV-A   
+      T1OFINT_ISR,   // EV-A   
+      rsvd_ISR,   
+         
+// Group 3 PIE Vectors   
+      T2PINT_ISR,    // EV-A   
+      T2CINT_ISR,    // EV-A   
+      T2UFINT_ISR,   // EV-A   
+      T2OFINT_ISR,   // EV-A   
+      CAPINT1_ISR,   // EV-A   
+      CAPINT2_ISR,   // EV-A   
+      CAPINT3_ISR,   // EV-A   
+      rsvd_ISR,   
+         
+// Group 4 PIE Vectors   
+      CMP4INT_ISR,   // EV-B   
+      CMP5INT_ISR,   // EV-B   
+      CMP6INT_ISR,   // EV-B   
+      T3PINT_ISR,    // EV-B   
+      T3CINT_ISR,    // EV-B   
+      T3UFINT_ISR,   // EV-B   
+      T3OFINT_ISR,   // EV-B   
+      rsvd_ISR,         
+        
+// Group 5 PIE Vectors   
+      T4PINT_ISR,    // EV-B   
+      T4CINT_ISR,    // EV-B   
+      T4UFINT_ISR,   // EV-B   
+      T4OFINT_ISR,   // EV-B   
+      CAPINT4_ISR,   // EV-B   
+      CAPINT5_ISR,   // EV-B   
+      CAPINT6_ISR,   // EV-B   
+      rsvd_ISR,         
+   
+// Group 6 PIE Vectors   
+      SPIRXINTA_ISR,   // SPI-A   
+      SPITXINTA_ISR,   // SPI-A   
+      rsvd_ISR,   
+      rsvd_ISR,   
+      MRINTA_ISR,    // McBSP-A   
+      MXINTA_ISR,    // McBSP-A   
+      rsvd_ISR,   
+      rsvd_ISR,   
+         
+// Group 7 PIE Vectors   
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+   
+// Group 8 PIE Vectors   
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+         
+// Group 9 PIE Vectors        
+      SCIRXINTA_ISR, // SCI-A   
+      SCITXINTA_ISR, // SCI-A   
+      SCIRXINTB_ISR, // SCI-B   
+      SCITXINTB_ISR, // SCI-B   
+      ECAN0INTA_ISR, // eCAN   
+      ECAN1INTA_ISR, // eCAN   
+      rsvd_ISR,      
+      rsvd_ISR,      
+         
+// Group 10 PIE Vectors   
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+               
+// Group 11 PIE Vectors   
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+   
+// Group 12 PIE Vectors   
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+      rsvd_ISR,      
+};   
+   
+   
+//---------------------------------------------------------------------------   
+// InitPieVectTable:    
+//---------------------------------------------------------------------------   
+// This function initializes the PIE vector table to a known state.   
+// This function must be executed after boot time.   
+//   
+   
+void InitPieVectTable(void)   
+{   
+    int16   i;   
+    Uint32 *Source = (void *) &PieVectTableInit;   
+    Uint32 *Dest = (void *) &PieVectTable;   
+           
+    EALLOW;    
+    for(i=0; i < 128; i++)   
+        *Dest++ = *Source++;       
+    EDIS;   
+   
+    // Enable the PIE Vector Table   
+    PieCtrlRegs.PIECRTL.bit.ENPIE = 1;     
+}   
+   
+struct CPUTIMER_VARS CpuTimer0;   
+   
+// CpuTimer 1 and CpuTimer2 are reserved for DSP BIOS & other RTOS   
+//struct CPUTIMER_VARS CpuTimer1;   
+//struct CPUTIMER_VARS CpuTimer2;   
+   
+//---------------------------------------------------------------------------   
+// InitCpuTimers:    
+//---------------------------------------------------------------------------   
+// This function initializes all three CPU timers to a known state.   
+//   
+void InitCpuTimers(void)   
+{   
+    // CPU Timer 0   
+    // Initialize address pointers to respective timer registers:   
+    CpuTimer0.RegsAddr = &CpuTimer0Regs;   
+    // Initialize timer period to maximum:     
+    CpuTimer0Regs.PRD.all  = 0xFFFFFFFF;   
+    // Initialize pre-scale counter to divide by 1 (SYSCLKOUT):    
+    CpuTimer0Regs.TPR.all  = 0;   
+    CpuTimer0Regs.TPRH.all = 0;   
+    // Make sure timer is stopped:   
+    CpuTimer0Regs.TCR.bit.TSS = 1;   
+    // Reload all counter register with period value:   
+    CpuTimer0Regs.TCR.bit.TRB = 1;   
+    // Reset interrupt counters:   
+    CpuTimer0.InterruptCount = 0;                      
+       
+       
+// CpuTimer 1 and CpuTimer2 are reserved for DSP BIOS & other RTOS   
+// Do not use these two timers if you ever plan on integrating    
+// DSP-BIOS or another realtime OS.    
+//   
+// For this reason, the code to manipulate these two timers is   
+// commented out and not used in these examples.   
+   
+// Initialize address pointers to respective timer registers:   
+//  CpuTimer1.RegsAddr = &CpuTimer1Regs;   
+//  CpuTimer2.RegsAddr = &CpuTimer2Regs;   
+// Initialize timer period to maximum:   
+//  CpuTimer1Regs.PRD.all  = 0xFFFFFFFF;   
+//  CpuTimer2Regs.PRD.all  = 0xFFFFFFFF;   
+// Make sure timers are stopped:   
+//  CpuTimer1Regs.TCR.bit.TSS = 1;                
+//  CpuTimer2Regs.TCR.bit.TSS = 1;                
+// Reload all counter register with period value:   
+//  CpuTimer1Regs.TCR.bit.TRB = 1;                
+//  CpuTimer2Regs.TCR.bit.TRB = 1;                
+// Reset interrupt counters:   
+//  CpuTimer1.InterruptCount = 0;   
+//  CpuTimer2.InterruptCount = 0;   
+   
+}      
+       
+///---------------------------------------------------------------------------   
+// ConfigCpuTimer:    
+//---------------------------------------------------------------------------   
+// This function initializes the selected timer to the period specified   
+// by the "Freq" and "Period" parameters. The "Freq" is entered as "MHz"   
+// and the period in "uSeconds". The timer is held in the stopped state   
+// after configuration.   
+//   
+void ConfigCpuTimer(struct CPUTIMER_VARS *Timer, float Freq, float Period)   
+{   
+    Uint32  temp;   
+       
+   // Initialize timer period:    
+    Timer->CPUFreqInMHz = Freq;   
+    Timer->PeriodInUSec = Period;   
+    temp = (long) (Freq * Period);   
+    Timer->RegsAddr->PRD.all = temp;   
+   
+    // Set pre-scale counter to divide by 1 (SYSCLKOUT):       
+    Timer->RegsAddr->TPR.all  = 0;   
+    Timer->RegsAddr->TPRH.all  = 0;   
+       
+    // Initialize timer control register:   
+    Timer->RegsAddr->TCR.bit.TSS = 1;      // 1 = Stop timer, 0 = Start/Restart Timer    
+    Timer->RegsAddr->TCR.bit.TRB = 1;      // 1 = reload timer   
+    Timer->RegsAddr->TCR.bit.SOFT = 1;   
+    Timer->RegsAddr->TCR.bit.FREE = 1;     // Timer Free Run   
+    Timer->RegsAddr->TCR.bit.TIE = 1;      // 0 = Disable/ 1 = Enable Timer Interrupt   
+       
+    // Reset interrupt counter:   
+    Timer->InterruptCount = 0;   
+}   
+//---------------------------------------------------------------------------   
+// InitXINTF:    
+//---------------------------------------------------------------------------   
+// This function initializes the External Interface the default reset state.   
+//   
+// Do not modify the timings of the XINTF while running from the XINTF.  Doing   
+// so can yield unpredictable results   
+   
+   
+void InitXintf(void)   
+{   
+   
+#if  F2812   
+   
+    // This shows how to write to the XINTF registers.  The   
+    // values used here are the default state after reset.   
+    // Different hardware will require a different configuration.   
+       
+    // For an example of an XINTF configuration used with the   
+    // F2812 eZdsp, refer to the examples/run_from_xintf project.   
+       
+    // Any changes to XINTF timing should only be made by code   
+    // running outside of the XINTF.    
+       
+    // All Zones---------------------------------   
+    // Timing for all zones based on XTIMCLK = 1/2 SYSCLKOUT    
+    XintfRegs.XINTCNF2.bit.XTIMCLK = 0;   
+    // No write buffering   
+    XintfRegs.XINTCNF2.bit.WRBUFF = 3;   
+    // XCLKOUT is enabled   
+    XintfRegs.XINTCNF2.bit.CLKOFF = 0;   
+    // XCLKOUT = XTIMCLK/2    
+    XintfRegs.XINTCNF2.bit.CLKMODE = 1;   
+       
+       
+    // Zone 0------------------------------------   
+    // When using ready, ACTIVE must be 1 or greater   
+    // Lead must always be 1 or greater   
+    // Zone write timing   
+    XintfRegs.XTIMING0.bit.XWRLEAD = 3;   
+    XintfRegs.XTIMING0.bit.XWRACTIVE = 7;   
+    XintfRegs.XTIMING0.bit.XWRTRAIL = 3;   
+    // Zone read timing   
+    XintfRegs.XTIMING0.bit.XRDLEAD = 3;   
+    XintfRegs.XTIMING0.bit.XRDACTIVE = 7;   
+    XintfRegs.XTIMING0.bit.XRDTRAIL = 3;   
+       
+    // double all Zone read/write lead/active/trail timing    
+    XintfRegs.XTIMING0.bit.X2TIMING = 1;   
+   
+    // Zone will sample XREADY signal    
+    XintfRegs.XTIMING0.bit.USEREADY = 1;   
+    XintfRegs.XTIMING0.bit.READYMODE = 1;  // sample asynchronous   
+   
+    // Size must be 1,1 - other values are reserved   
+    XintfRegs.XTIMING0.bit.XSIZE = 3;   
+       
+    // Zone 1------------------------------------   
+    // When using ready, ACTIVE must be 1 or greater   
+    // Lead must always be 1 or greater   
+    // Zone write timing   
+    XintfRegs.XTIMING1.bit.XWRLEAD = 3;   
+    XintfRegs.XTIMING1.bit.XWRACTIVE = 7;   
+    XintfRegs.XTIMING1.bit.XWRTRAIL = 3;   
+    // Zone read timing   
+    XintfRegs.XTIMING1.bit.XRDLEAD = 3;   
+    XintfRegs.XTIMING1.bit.XRDACTIVE = 7;   
+    XintfRegs.XTIMING1.bit.XRDTRAIL = 3;   
+       
+    // double all Zone read/write lead/active/trail timing    
+    XintfRegs.XTIMING1.bit.X2TIMING = 1;   
+   
+    // Zone will sample XREADY signal    
+    XintfRegs.XTIMING1.bit.USEREADY = 1;   
+    XintfRegs.XTIMING1.bit.READYMODE = 1;  // sample asynchronous   
+   
+    // Size must be 1,1 - other values are reserved   
+    XintfRegs.XTIMING1.bit.XSIZE = 3;   
+   
+    // Zone 2------------------------------------   
+    // When using ready, ACTIVE must be 1 or greater   
+    // Lead must always be 1 or greater   
+    // Zone write timing   
+    XintfRegs.XTIMING2.bit.XWRLEAD = 3;   
+    XintfRegs.XTIMING2.bit.XWRACTIVE = 7;   
+    XintfRegs.XTIMING2.bit.XWRTRAIL = 3;   
+    // Zone read timing   
+    XintfRegs.XTIMING2.bit.XRDLEAD = 3;   
+    XintfRegs.XTIMING2.bit.XRDACTIVE = 7;   
+    XintfRegs.XTIMING2.bit.XRDTRAIL = 3;   
+       
+    // double all Zone read/write lead/active/trail timing    
+    XintfRegs.XTIMING2.bit.X2TIMING = 1;   
+   
+    // Zone will sample XREADY signal    
+    XintfRegs.XTIMING2.bit.USEREADY = 1;   
+    XintfRegs.XTIMING2.bit.READYMODE = 1;  // sample asynchronous   
+   
+    // Size must be 1,1 - other values are reserved   
+    XintfRegs.XTIMING2.bit.XSIZE = 3;   
+   
+   
+    // Zone 6------------------------------------   
+    // When using ready, ACTIVE must be 1 or greater   
+    // Lead must always be 1 or greater   
+    // Zone write timing   
+    XintfRegs.XTIMING6.bit.XWRLEAD = 1;   
+    XintfRegs.XTIMING6.bit.XWRACTIVE = 1;   
+    XintfRegs.XTIMING6.bit.XWRTRAIL = 1;   
+    // Zone read timing   
+    XintfRegs.XTIMING6.bit.XRDLEAD = 1;   
+    XintfRegs.XTIMING6.bit.XRDACTIVE = 2;   
+    XintfRegs.XTIMING6.bit.XRDTRAIL = 0;   
+       
+    // double all Zone read/write lead/active/trail timing    
+    XintfRegs.XTIMING6.bit.X2TIMING = 0;   
+   
+    // Zone will sample XREADY signal    
+    XintfRegs.XTIMING6.bit.USEREADY = 0;   
+    XintfRegs.XTIMING6.bit.READYMODE = 0;  // sample asynchronous   
+   
+    // Size must be 1,1 - other values are reserved   
+    XintfRegs.XTIMING6.bit.XSIZE = 3;   
+   
+   
+    // Zone 7------------------------------------   
+    // When using ready, ACTIVE must be 1 or greater   
+    // Lead must always be 1 or greater   
+    // Zone write timing   
+    XintfRegs.XTIMING7.bit.XWRLEAD = 1;   
+    XintfRegs.XTIMING7.bit.XWRACTIVE = 1;   
+    XintfRegs.XTIMING7.bit.XWRTRAIL = 1;   
+    // Zone read timing   
+    XintfRegs.XTIMING7.bit.XRDLEAD = 1;   
+    XintfRegs.XTIMING7.bit.XRDACTIVE = 2;   
+    XintfRegs.XTIMING7.bit.XRDTRAIL = 0;   
+       
+    // double all Zone read/write lead/active/trail timing    
+    XintfRegs.XTIMING7.bit.X2TIMING = 0;   
+   
+    // Zone will sample XREADY signal    
+    XintfRegs.XTIMING7.bit.USEREADY = 0;   
+    XintfRegs.XTIMING7.bit.READYMODE = 0;  // sample asynchronous   
+   
+    // Size must be 1,1 - other values are reserved   
+    XintfRegs.XTIMING7.bit.XSIZE = 3;   
+   
+    // Bank switching   
+    // Assume Zone 7 is slow, so add additional BCYC cycles    
+    // when ever switching from Zone 7 to another Zone.     
+    // This will help avoid bus contention.   
+    XintfRegs.XBANK.bit.BANK = 7;   
+    XintfRegs.XBANK.bit.BCYC = 7;   
+   
+   //Force a pipeline flush to ensure that the write to    
+   //the last register configured occurs before returning.     
+   
+   asm(" RPT #7 || NOP");    
+       
+    #endif   
+}   
+
+ 
+#ifdef __cplusplus
+}
+#endif /* extern "C" */
+
+#endif  // end of DSP281x_INIT_H definition
+
+//===========================================================================
+// No more.
+//===========================================================================
+
+
+
+ 
+ 

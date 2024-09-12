@@ -1,0 +1,52 @@
+; Code Composer Project File, Version 2.0 (do not modify or remove this line)
+
+[Project Settings]
+ProjectDir="C:\ti\myprojects\edu2811\lib28x\"
+ProjectType=Library
+CPUFamily=TMS320C28XX
+Tool="Archiver"
+Tool="Compiler"
+Tool="DspBiosBuilder"
+Config="Debug"
+Config="Release"
+
+[Source Files]
+Source="adc2811.c"
+Source="dac2811.c"
+Source="debug_28x.c"
+Source="delay28x.c"
+Source="DSP281x_MemCopy.c"
+Source="eep2811.c"
+Source="key2811.c"
+Source="lcd2811.c"
+Source="scib28x.c"
+
+[Generated Files]
+Source="Debug\adc2811.obj"
+Source="Debug\dac2811.obj"
+Source="Debug\debug_28x.obj"
+Source="Debug\delay28x.obj"
+Source="Debug\DSP281x_MemCopy.obj"
+Source="Debug\eep2811.obj"
+Source="Debug\key2811.obj"
+Source="Debug\lcd2811.obj"
+Source="Debug\scib28x.obj"
+
+["Archiver" Settings: "Debug"]
+Options=-r -o.\Debug\lib28x.lib
+
+["Archiver" Settings: "Release"]
+Options=-r -o.\Release\lib28x.lib
+
+["Compiler" Settings: "Debug"]
+Options=-g -q -fr"C:\ti\myprojects\edu2811\lib28x\Debug" -i"C:\ti\myprojects\edu2811\dsp281x_include" -d"_DEBUG" -d"LARGE_MODEL" -ml -v28
+
+["Compiler" Settings: "Release"]
+Options=-q -o3 -fr"C:\ti\myprojects\edu2811\lib28x\Release" -d"LARGE_MODEL" -ml -v28
+
+["DspBiosBuilder" Settings: "Debug"]
+Options=-v28
+
+["DspBiosBuilder" Settings: "Release"]
+Options=-v28
+

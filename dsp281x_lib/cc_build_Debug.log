@@ -1,0 +1,26 @@
+-----------------------------  lib28x.pjt - Debug  -----------------------------
+"C:\ti\c2000\cgtools\bin\cl2000" -g -q -fr"C:/ti/myprojects/edu2811/lib28x/Debug" -i"C:/ti/myprojects/edu2811/dsp281x_include" -d"_DEBUG" -d"LARGE_MODEL" -ml -v28 -@"Debug.lkf" "adc2811.c"
+
+"C:\ti\c2000\cgtools\bin\cl2000" -g -q -fr"C:/ti/myprojects/edu2811/lib28x/Debug" -i"C:/ti/myprojects/edu2811/dsp281x_include" -d"_DEBUG" -d"LARGE_MODEL" -ml -v28 -@"Debug.lkf" "dac2811.c"
+"dac2811.c", line 28: warning: variable "tmp" was set but never used
+
+"C:\ti\c2000\cgtools\bin\cl2000" -g -q -fr"C:/ti/myprojects/edu2811/lib28x/Debug" -i"C:/ti/myprojects/edu2811/dsp281x_include" -d"_DEBUG" -d"LARGE_MODEL" -ml -v28 -@"Debug.lkf" "debug_28x.c"
+
+"C:\ti\c2000\cgtools\bin\cl2000" -g -q -fr"C:/ti/myprojects/edu2811/lib28x/Debug" -i"C:/ti/myprojects/edu2811/dsp281x_include" -d"_DEBUG" -d"LARGE_MODEL" -ml -v28 -@"Debug.lkf" "delay28x.c"
+
+"C:\ti\c2000\cgtools\bin\cl2000" -g -q -fr"C:/ti/myprojects/edu2811/lib28x/Debug" -i"C:/ti/myprojects/edu2811/dsp281x_include" -d"_DEBUG" -d"LARGE_MODEL" -ml -v28 -@"Debug.lkf" "DSP281x_MemCopy.c"
+
+"C:\ti\c2000\cgtools\bin\cl2000" -g -q -fr"C:/ti/myprojects/edu2811/lib28x/Debug" -i"C:/ti/myprojects/edu2811/dsp281x_include" -d"_DEBUG" -d"LARGE_MODEL" -ml -v28 -@"Debug.lkf" "eep2811.c"
+
+"C:\ti\c2000\cgtools\bin\cl2000" -g -q -fr"C:/ti/myprojects/edu2811/lib28x/Debug" -i"C:/ti/myprojects/edu2811/dsp281x_include" -d"_DEBUG" -d"LARGE_MODEL" -ml -v28 -@"Debug.lkf" "key2811.c"
+
+"C:\ti\c2000\cgtools\bin\cl2000" -g -q -fr"C:/ti/myprojects/edu2811/lib28x/Debug" -i"C:/ti/myprojects/edu2811/dsp281x_include" -d"_DEBUG" -d"LARGE_MODEL" -ml -v28 -@"Debug.lkf" "lcd2811.c"
+
+"C:\ti\c2000\cgtools\bin\cl2000" -g -q -fr"C:/ti/myprojects/edu2811/lib28x/Debug" -i"C:/ti/myprojects/edu2811/dsp281x_include" -d"_DEBUG" -d"LARGE_MODEL" -ml -v28 -@"Debug.lkf" "scib28x.c"
+
+"C:\ti\c2000\cgtools\bin\ar2000" @"Debug.lkf"
+  ==>  new archive 'C:\ti\myprojects\edu2811\lib28x\Debug\lib28x.lib'
+  ==>  building archive 'C:\ti\myprojects\edu2811\lib28x\Debug\lib28x.lib'
+
+Build Complete,
+  0 Errors, 1 Warnings, 0 Remarks.

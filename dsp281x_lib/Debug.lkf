@@ -1,0 +1,11 @@
+-r
+"C:\ti\myprojects\edu2811\lib28x\Debug\lib28x.lib"
+"C:\ti\myprojects\edu2811\lib28x\Debug\adc2811.obj"
+"C:\ti\myprojects\edu2811\lib28x\Debug\dac2811.obj"
+"C:\ti\myprojects\edu2811\lib28x\Debug\debug_28x.obj"
+"C:\ti\myprojects\edu2811\lib28x\Debug\delay28x.obj"
+"C:\ti\myprojects\edu2811\lib28x\Debug\DSP281x_MemCopy.obj"
+"C:\ti\myprojects\edu2811\lib28x\Debug\eep2811.obj"
+"C:\ti\myprojects\edu2811\lib28x\Debug\key2811.obj"
+"C:\ti\myprojects\edu2811\lib28x\Debug\lcd2811.obj"
+"C:\ti\myprojects\edu2811\lib28x\Debug\scib28x.obj"

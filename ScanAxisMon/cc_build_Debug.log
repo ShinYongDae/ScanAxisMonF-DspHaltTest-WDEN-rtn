@@ -1,0 +1,53 @@
+--------------------------  ScanAxisMon.pjt - Debug  --------------------------
+[Main.c] "C:\CCStudio_v3.3\C2000\cgtools\bin\cl2000" -g -pdsw225 -fr"C:/BeamShutter/ScanAxisMonF-DspHaltTest-WDEN-rtn/ScanAxisMon/Debug" -i"dsp281x_include" -i"../dsp281x_include" -d"_DEBUG" -d"LARGE_MODEL" -ml -v28 -@"Debug.lkf" "Main.c"
+"Main.c", line 243: warning: variable "tmp" was set but never used
+"Main.c", line 408: warning: pointless comparison of unsigned integer with zero
+"Main.c", line 405: warning: variable "tmp" was set but never used
+"Main.c", line 1768: warning: integer operation result is out of range
+"Main.c", line 1769: warning: integer operation result is out of range
+"Main.c", line 1740: warning: variable "lDiff2" was set but never used
+"Main.c", line 1740: warning: variable "lDiff3" was set but never used
+"Main.c", line 1740: warning: variable "lDiff4" was set but never used
+"Main.c", line 2053: warning: function declared implicitly
+"Main.c", line 2082: warning: integer operation result is out of range
+"Main.c", line 2083: warning: integer operation result is out of range
+"Main.c", line 2460: warning: integer conversion resulted in a change of sign
+"Main.c", line 2447: warning: variable "nMode" was declared but never referenced
+"Main.c", line 2520: warning: variable "value" was declared but never referenced
+"Main.c", line 2574: warning: variable "temp1" was declared but never referenced
+"Main.c", line 2574: warning: variable "temp2" was declared but never referenced
+"Main.c", line 2602: warning: variable "nTemp" was declared but never referenced
+"Main.c", line 2668: warning: function declared implicitly
+"Main.c", line 2670: warning: function declared implicitly
+"Main.c", line 2872: warning: function declared implicitly
+"Main.c", line 2874: warning: function declared implicitly
+"Main.c", line 2889: warning: function declared implicitly
+"Main.c", line 2931: warning: function declared implicitly
+"Main.c", line 2962: warning: function declared implicitly
+"Main.c", line 3032: warning: function declared implicitly
+"Main.c", line 3078: warning: function declared implicitly
+"Main.c", line 3161: warning: function declared implicitly
+"Main.c", line 3296: warning: function declared implicitly
+"Main.c", line 3315: warning: function declared implicitly
+"Main.c", line 3339: warning: function declared implicitly
+"Main.c", line 3358: warning: function declared implicitly
+"Main.c", line 3383: warning: function declared implicitly
+"Main.c", line 3409: warning: function declared implicitly
+"Main.c", line 3428: warning: function declared implicitly
+"Main.c", line 3453: warning: function declared implicitly
+"Main.c", line 3989: warning: function declared implicitly
+"Main.c", line 3993: warning: function declared implicitly
+"Main.c", line 3994: warning: function declared implicitly
+"Main.c", line 4006: warning: function declared implicitly
+"Main.c", line 4011: warning: function declared implicitly
+"Main.c", line 4036: warning: function declared implicitly
+"Main.c", line 4048: warning: function declared implicitly
+"Main.c", line 4136: warning: function declared implicitly
+"Main.c", line 4146: warning: function declared implicitly
+"Main.c", line 4172: warning: function declared implicitly
+
+[Linking...] "C:\CCStudio_v3.3\C2000\cgtools\bin\cl2000" -@"Debug.lkf"
+<Linking>
+
+Build Complete,
+  0 Errors, 45 Warnings, 0 Remarks.

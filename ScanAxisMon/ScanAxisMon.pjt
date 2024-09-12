@@ -1,0 +1,40 @@
+; Code Composer Project File, Version 2.0 (do not modify or remove this line)
+
+[Project Settings]
+ProjectDir="E:\myDev\DSP\BeamShutterDebuging\ScanAxisMonF-DspHaltTest-WDEN\ScanAxisMon\"
+ProjectType=Executable
+CPUFamily=TMS320C28XX
+Tool="Compiler"
+Tool="CustomBuilder"
+Tool="DspBiosBuilder"
+Tool="Linker"
+Config="Debug"
+Config="Release"
+
+[Source Files]
+Source="..\dsp281x_src\DSP281x_CodeStartBranch.asm"
+Source="..\dsp281x_src\DSP281x_CpuTimers.c"
+Source="..\dsp281x_src\DSP281x_DefaultIsr.c"
+Source="..\dsp281x_src\DSP281x_GlobalVariableDefs.c"
+Source="..\dsp281x_src\DSP281x_Gpio.c"
+Source="..\dsp281x_src\DSP281x_MemCopy.c"
+Source="..\dsp281x_src\DSP281x_PieCtrl.c"
+Source="..\dsp281x_src\DSP281x_PieVect.c"
+Source="..\dsp281x_src\DSP281x_Sci.c"
+Source="..\dsp281x_src\DSP281x_SysCtrl.c"
+Source="..\dsp281x_src\DSP281x_XIntrupt.c"
+Source="Main.c"
+Source="..\DSP2812F.CMD"
+
+["Compiler" Settings: "Debug"]
+Options=-g -pdsw225 -fr"$(Proj_dir)\Debug" -i"dsp281x_include" -i"..\dsp281x_include" -d"_DEBUG" -d"LARGE_MODEL" -ml -v28
+
+["Compiler" Settings: "Release"]
+Options=-pdsw225 -o3 -fr"$(Proj_dir)\Release" -d"LARGE_MODEL" -ml -v28
+
+["Linker" Settings: "Debug"]
+Options=-c -ecode_start -m".\Debug\ScanAxisMon.map" -o".\Debug\ScanAxisMon.out" -stack0x200 -w -x -i"..\\dsp281x_lib\Debug" -l"rts2800_ml.LIB" -l"LIB28X.LIB"
+
+["Linker" Settings: "Release"]
+Options=-c -m".\Release\ScanAxisMon.map" -o".\Release\ScanAxisMon.out" -w -x
+

@@ -1,0 +1,53 @@
+#
+#  ======== xdais28l.gmk ========
+#
+#  This file initializes variables for use when compiling and linking
+#  XDAS programs for the C28x DSP.
+#
+#  This makefile requires that the following two variables be set:
+#	XDASDIR    - installation directory of the XDAS DDK
+#	TOOLS28DIR - installation directory of the TI C2xx code gen tools
+#
+#  Note:  This makefile is usually included automatically by xdais.gmk and
+#	  xdais.gmk sets default values for the variables above.
+#
+
+#
+#  The following macros define the DSP architecture specific variables
+#  used in the reset of the makefiles.  The variables seldom require any
+#  changes (for a particular DSP architecture)
+#
+#    CHIP	- this variable defines a suffix used to distinguish between 
+#		  libraries and object files created for different DSP
+#		  architectures; e.g., spoxknl.a28 is an archive for the 
+#		  TMS320C28 but spoxknl.a40 is an archive of objects for 
+#		  the TMS320C40.
+#
+
+CHIP	    = 28l
+
+CC	    = $(TOOLSDIR)/bin/cl2000
+CCPERMOPTS  = -qq -v28 -ml -D_28l_ -D"LARGE_MODEL" -eo.o$(CHIP) -ea.s$(CHIP)  
+CCINCS	    = $(patsubst %,-I%,$(subst ;, ,$(INCPATH)))
+
+ASM	    = $(TOOLSDIR)/bin/cl2000
+ASMPERMOPTS = -qq -v28 -ml -D"LARGE_MODEL" -eo.o$(CHIP) -ea.s$(CHIP)
+ASMINCS	    = $(CCINCS)
+
+LINK	    = $(TOOLSDIR)/bin/lnk2000 -q
+LINKOPTS    = 
+ARCH	    = $(TOOLSDIR)/bin/ar2000 qr
+
+#
+# Convert C54 environment variables to "generic" names for use in makefiles 
+# and convert paths to use '/' instead of '\' (this allows one set of 
+# makefiles for both Windows and UNIX environments)
+#
+TOOLSDIR  := $(subst \,/,$(TOOLS28DIR))
+XDASBOARD := $(XDAS28BOARD)
+BIOSDIR   := $(subst \,/,$(TI_DIR)/c2000/bios)
+
+#
+#  Include the generic XDAS makefile rules
+#
+include $(XDASDIR)/include/xdaisgen.gmk

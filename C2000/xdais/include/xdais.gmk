@@ -1,0 +1,71 @@
+#
+#  ======== xdais.gmk ========
+#
+#  Standard makefile for XDAS development
+#
+#  This makefile is included by all XDAS development directories and defines
+#  all macros and rules necessary to create "generic makefiles for XDAS 
+#  development.
+#
+#  This makefile allows a XDAS developer to build for a single DSP
+#  architecture (specified by the CHIP macro below).  This makefile requires
+#  that the following environment variable be set:
+#
+#	XDASDIR	 - the installation directory of the XDAS DDK
+#
+
+#
+#  The following macro must be set to the DSP architecture you are building 
+#  for.  The following choices are supported:
+#
+#	62 - C6000 family
+#	54 - C5400 family
+#
+
+ifndef CHIP
+    CHIP = 62
+endif
+
+ifndef CHIP
+    CHIPDIR = c6000
+endif
+
+XDASDIR = $(TI_DIR)/$(CHIPDIR)/xdais
+
+#
+#  Set installation directories (if they're not already specified)
+#
+#  These only need to be changed if you do not define these as 
+#  environment variables.  Note that you should use the UNIX directory
+#  path separation character '/' in these definitions; this insures 
+#  that this makefile can be used in either UNIX or Windows systems.
+#
+
+ifndef TOOLS28DIR
+    TOOLS28DIR  := $(TI_DIR)/c2000/cgtools
+endif
+
+ifndef TOOLS54DIR
+    TOOLS54DIR  := $(TI_DIR)/c5400/cgtools
+endif
+
+ifndef TOOLS55DIR
+    TOOLS55DIR  := $(TI_DIR)/c5500/cgtools
+endif
+
+ifndef TOOLS62DIR
+    TOOLS62DIR  := $(TI_DIR)/c6000/cgtools
+endif
+
+ifndef TOOLS64DIR
+    TOOLS64DIR  := $(TI_DIR)/c6000/cgtools
+endif
+
+ifndef TOOLS67DIR
+    TOOLS67DIR  := $(TI_DIR)/c6000/cgtools
+endif
+
+#
+#  Include DSP specific XDAS make file
+#
+include $(XDASDIR)/include/xdais$(CHIP).gmk
